@@ -4,7 +4,7 @@ const path = require('path');
 
 const sharedWebOptions = {
 	bundle: true,
-	entryPoints: ['src/webview-ui/app-component.ts'],
+	entryPoints: ['src/webview/app-component.ts'],
 	outfile: 'dist/webview/bundle.js',
 	format: 'esm',
 	target: 'es2022',
@@ -30,13 +30,13 @@ async function build() {
 	
 	// 2. Copy HTML markup and styling files
 	fs.mkdirSync('dist/webview', { recursive: true });
-	fs.copyFileSync('src/webview-ui/index.html', 'dist/webview/index.html');
-	fs.copyFileSync('src/webview-ui/index.css', 'dist/webview/index.css');
+	fs.copyFileSync('src/webview/index.html', 'dist/webview/index.html');
+	fs.copyFileSync('src/webview/index.css', 'dist/webview/index.css');
 
 	// 3. Resolve and copy compiled WASM core to dist/wasm/
 	fs.mkdirSync('dist/wasm', { recursive: true });
-	const debugWasm = 'src/rust-core/target/wasm32-unknown-unknown/debug/dashboard_engine.wasm';
-	const releaseWasm = 'src/rust-core/target/wasm32-unknown-unknown/release/dashboard_engine.wasm';
+	const debugWasm = 'src/rust/target/wasm32-unknown-unknown/debug/dashboard_engine.wasm';
+	const releaseWasm = 'src/rust/target/wasm32-unknown-unknown/release/dashboard_engine.wasm';
 	
 	let wasmSource = null;
 	if (fs.existsSync(releaseWasm)) {

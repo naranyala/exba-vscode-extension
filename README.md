@@ -11,7 +11,7 @@ This starter contains 4 distinct API demonstrations activated within a single ex
 1.  **Hello World** (`samples.helloWorld`): Demonstrates basic commands, menu contributions, and system notification messages.
 2.  **Tree View** (`nodeDependencies`): A custom Explorer/Sidebar view that reads the current workspace's `package.json` file and displays dependencies inside a native TreeView.
 3.  **Webview (Cat)** (`samples.showWebview`): Demonstrates opening a standard HTML/CSS webview panel and serving a local media asset (`cat.gif`).
-4.  **WASM Web Component Dashboard** (`samples.showDashboard`): Demonstrates opening an advanced HTML/CSS webview panel hosting a custom reactive browser Web Component framework driven by a high-performance, zero-dependency Rust-WASM engine ([src/rust-core/](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/rust-core)).
+4.  **WASM Web Component Dashboard** (`samples.showDashboard`): Demonstrates opening an advanced HTML/CSS webview panel hosting a custom reactive browser Web Component framework driven by a high-performance, zero-dependency Rust-WASM engine ([src/rust/](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/rust)).
 
 ---
 
@@ -21,9 +21,9 @@ This starter contains 4 distinct API demonstrations activated within a single ex
 - [tsconfig.json](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/tsconfig.json): TypeScript configuration supporting both Node (extension host) and DOM (webview frontend) code.
 - [esbuild.js](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/bin/esbuild.js): Bundles the extension host and webview files, copies UI resources, and copies compiled WASM binaries to `dist/`.
 - `src/extension.ts`: Main entry point activating the features.
-- `src/features/`: Source code for Hello World, Tree View, Webview, and WASM Dashboard controllers.
-- `src/webview-ui/`: Browser-native Custom Element components and Proxy-based reactive state framework.
-- `src/rust-core/`: Rust library compiling to WebAssembly.
+- `src/*.ts`: Feature implementations (Hello World, Tree View, Webview, and WASM Dashboard).
+- `src/webview/`: Browser-native Custom Element components and Proxy-based reactive state framework.
+- `src/rust/`: Rust library compiling to WebAssembly.
 - `media/`: Static assets (icons and images).
 
 ---
@@ -74,7 +74,7 @@ To package your extension into a `.vsix` file for distribution or marketplace up
     ```
 2.  **Compile Rust in Release Mode**:
     ```bash
-    cargo build --target wasm32-unknown-unknown --release --manifest-path src/rust-core/Cargo.toml
+    cargo build --target wasm32-unknown-unknown --release --manifest-path src/rust/Cargo.toml
     ```
 3.  **Run Javascript Bundler**:
     ```bash
