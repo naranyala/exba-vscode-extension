@@ -11,17 +11,21 @@ This starter contains 4 distinct API demonstrations activated within a single ex
 1.  **Hello World** (`samples.helloWorld`): Demonstrates basic commands, menu contributions, and system notification messages.
 2.  **Tree View** (`nodeDependencies`): A custom Explorer/Sidebar view that reads the current workspace's `package.json` file and displays dependencies inside a native TreeView.
 3.  **Webview (Cat)** (`samples.showWebview`): Demonstrates opening a standard HTML/CSS webview panel and serving a local media asset (`cat.gif`).
-4.  **WASM Web Component Dashboard** (`samples.showDashboard`): Demonstrates opening an advanced HTML/CSS webview panel hosting a custom reactive browser Web Component framework driven by a high-performance, zero-dependency Rust-WASM engine ([src/rust/](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/rust)).
+4.  **WASM Web Component Dashboard** (`samples.showDashboard`): Renders a browser-native Custom Element dashboard backed by a high-performance, zero-dependency Rust-WASM engine ([src/rust/](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/rust)). Key features of this implementation include:
+    - **Explorer Grid with Fuzzy Search**: (Default view) Lists tool cards with category badges and tag chips, filtered instantly as you type via reactive fuzzy search.
+    - **Proxy-Based Reactive State**: A custom state container ([wasm-framework.ts](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/webview/wasm-framework.ts)) implementing reactivity via ES6 Proxies and batching updates inside `requestAnimationFrame`.
+    - **Global Shared Store (`WasmStore`)**: Synchronizes settings and calculation inputs between separate Custom Elements (`<dashboard-app>` and `<settings-panel>`).
+    - **Dynamic Rust Calculator**: Rust backend calculations recalculate metrics in real-time based on the shared Web Component state.
 
 ---
 
 ## 📂 Project Structure
 
-- [package.json](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/package.json): Defines extension activation events, commands, views, scripts, and dependencies.
+- [package.json](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/package.json): Defines extension activation events, commands, views, scripts, and dependencies (including `@vscode/webview-ui-toolkit` and language servers).
 - [tsconfig.json](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/tsconfig.json): TypeScript configuration supporting both Node (extension host) and DOM (webview frontend) code.
 - [esbuild.js](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/bin/esbuild.js): Bundles the extension host and webview files, copies UI resources, and copies compiled WASM binaries to `dist/`.
 - `src/extension.ts`: Main entry point activating the features.
-- `src/*.ts`: Feature implementations (Hello World, Tree View, Webview, and WASM Dashboard).
+- `src/*.ts`: Feature controllers (Hello World, Tree View, Webview, and WASM Dashboard).
 - `src/webview/`: Browser-native Custom Element components and Proxy-based reactive state framework.
 - `src/rust/`: Rust library compiling to WebAssembly.
 - `media/`: Static assets (icons and images).
