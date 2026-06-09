@@ -1,13 +1,37 @@
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+bun-debug.log*
+
+# OS Files
 .DS_Store
-npm-debug.log
 Thumbs.db
-**/node_modules/
-*/out/
-*/.vs/
-tsconfig.lsif.json
-*.lsif
-*.db
+
+# Dependency directories
+node_modules/
+/node_modules
+/*/node_modules
+
+# Build/output directories
+/out/
+/dist/
+/*/out
+/*/dist
+/wasm-webcomponent-webview-sample/dist/
+/wasm-component-model/out/
+/wasm-component-model/target/
+/wasm-webcomponent-webview-sample/target/
+
+# TypeScript
 *.tsbuildinfo
 
-# Don't check in API files. These should be pulled in during install
-vscode*.d.ts
+# Rust/Cargo
+target/
+/*/target/
+
+# VS Code
+.vscode-test/
+.history/
+*.vsix
