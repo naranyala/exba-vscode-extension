@@ -15,7 +15,7 @@ export const dashboardStore = new WasmStore<DashboardState>({
     conversion: 3.5,
     spend: 55,
     growth: 18,
-    tab: 'dashboard',
+    tab: 'explorer',
     search: ''
 });
 
