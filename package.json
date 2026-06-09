@@ -1,78 +1,82 @@
 {
-	"name": "vscode-extension-starter-showcase",
-	"displayName": "Unified VS Code Extension Starter & Showcase",
-	"description": "A streamlined unified extension starter showcasing commands, tree views, webviews, and Rust-WASM Custom Web Components.",
-	"version": "1.0.0",
-	"publisher": "vscode-samples",
-	"engines": {
-		"vscode": "^1.100.0"
-	},
-	"main": "./dist/extension.js",
-	"activationEvents": [],
-	"contributes": {
-		"viewsContainers": {
-			"activitybar": [
-				{
-					"id": "package-explorer",
-					"title": "Package Explorer",
-					"icon": "media/dep.svg"
-				}
-			]
-		},
-		"views": {
-			"package-explorer": [
-				{
-					"id": "nodeDependencies",
-					"name": "Node Dependencies",
-					"icon": "media/dep.svg",
-					"contextualTitle": "Package Explorer"
-				}
-			]
-		},
-		"commands": [
-			{
-				"command": "samples.helloWorld",
-				"category": "Samples",
-				"title": "Samples: Hello World"
-			},
-			{
-				"command": "samples.showWebview",
-				"category": "Samples",
-				"title": "Samples: Webview Demo (Cat)"
-			},
-			{
-				"command": "samples.showDashboard",
-				"category": "Samples",
-				"title": "Samples: WASM Web Component Dashboard"
-			},
-			{
-				"command": "nodeDependencies.refreshEntry",
-				"category": "Samples",
-				"title": "Refresh Dependencies",
-				"icon": {
-					"light": "media/dep.svg",
-					"dark": "media/dep.svg"
-				}
-			}
-		]
-	},
-	"dependencies": {
-		"@vscode/wasm-component-model": "^1.0.0",
-		"@vscode/webview-ui-toolkit": "^1.4.0",
-		"vscode-languageclient": "^9.0.1",
-		"vscode-languageserver": "^9.0.1"
-	},
-	"devDependencies": {
-		"@types/node": "^22",
-		"@types/vscode": "^1.100.0",
-		"@vscode/test-electron": "^2.4.1",
-		"esbuild": "^0.25.0",
-		"typescript": "^5.9.2"
-	},
-	"scripts": {
-		"vscode:prepublish": "bun run build",
-		"build:rust": "cargo build --target wasm32-unknown-unknown --manifest-path src/rust/Cargo.toml",
-		"build:js": "node ./bin/esbuild.js",
-		"build": "bun run build:rust && bun run build:js"
-	}
+    "name": "vscode-extension-starter-showcase",
+    "displayName": "Unified VS Code Extension Starter & Showcase",
+    "description": "A streamlined unified extension starter showcasing commands, tree views, webviews, and Rust-WASM Custom Web Components.",
+    "version": "1.0.0",
+    "publisher": "vscode-samples",
+    "engines": {
+        "vscode": "^1.100.0"
+    },
+    "main": "./dist/extension.js",
+    "activationEvents": [],
+    "contributes": {
+        "viewsContainers": {
+            "activitybar": [
+                {
+                    "id": "package-explorer",
+                    "title": "Package Explorer",
+                    "icon": "media/dep.svg"
+                }
+            ]
+        },
+        "views": {
+            "package-explorer": [
+                {
+                    "id": "nodeDependencies",
+                    "name": "Node Dependencies",
+                    "icon": "media/dep.svg",
+                    "contextualTitle": "Package Explorer"
+                }
+            ]
+        },
+        "commands": [
+            {
+                "command": "samples.helloWorld",
+                "category": "Samples",
+                "title": "Samples: Hello World"
+            },
+            {
+                "command": "samples.showWebview",
+                "category": "Samples",
+                "title": "Samples: Webview Demo (Cat)"
+            },
+            {
+                "command": "samples.showDashboard",
+                "category": "Samples",
+                "title": "Samples: WASM Web Component Dashboard"
+            },
+            {
+                "command": "nodeDependencies.refreshEntry",
+                "category": "Samples",
+                "title": "Refresh Dependencies",
+                "icon": {
+                    "light": "media/dep.svg",
+                    "dark": "media/dep.svg"
+                }
+            }
+        ]
+    },
+    "dependencies": {
+        "@vscode/wasm-component-model": "^1.0.0",
+        "@vscode/webview-ui-toolkit": "^1.4.0",
+        "vscode-languageclient": "^9.0.1",
+        "vscode-languageserver": "^9.0.1"
+    },
+    "devDependencies": {
+        "@biomejs/biome": "^1.9.4",
+        "@types/node": "^22",
+        "@types/vscode": "^1.100.0",
+        "@vscode/test-electron": "^2.4.1",
+        "esbuild": "^0.25.0",
+        "typescript": "^5.9.2"
+    },
+    "scripts": {
+        "vscode:prepublish": "bun run build",
+        "build:rust": "cargo build --target wasm32-unknown-unknown --manifest-path src/rust/Cargo.toml",
+        "build:js": "node ./bin/esbuild.js",
+        "build": "bun run build:rust && bun run build:js",
+        "lint": "biome lint .",
+        "format": "biome format --write .",
+        "check": "biome check --write ."
+    }
 }

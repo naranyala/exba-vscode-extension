@@ -1,17 +1,17 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 export function registerWebviewDemo(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-        vscode.commands.registerCommand('samples.showWebview', () => {
+        vscode.commands.registerCommand("samples.showWebview", () => {
             const panel = vscode.window.createWebviewPanel(
-                'catWebview',
-                'Webview Demo (Cat)',
+                "catWebview",
+                "Webview Demo (Cat)",
                 vscode.ViewColumn.One,
-                {}
+                {},
             );
 
             // Get path to disk resource
-            const onDiskPath = vscode.Uri.joinPath(context.extensionUri, 'media', 'cat.gif');
+            const onDiskPath = vscode.Uri.joinPath(context.extensionUri, "media", "cat.gif");
             const catGifUri = panel.webview.asWebviewUri(onDiskPath);
 
             panel.webview.html = `
@@ -50,6 +50,6 @@ export function registerWebviewDemo(context: vscode.ExtensionContext) {
                 </body>
                 </html>
             `;
-        })
+        }),
     );
 }

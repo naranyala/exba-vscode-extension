@@ -1,12 +1,21 @@
 {
-	"editor.insertSpaces": false,
-	"prettier.semi": true,
-	"prettier.printWidth": 92,
-	"prettier.singleQuote": true,
-	"prettier.useTabs": true,
-	"git.branchProtection": [
-        "main"
-    ],
+    "editor.defaultFormatter": "biomejs.biome",
+    "editor.formatOnSave": true,
+    "editor.insertSpaces": true,
+    "editor.tabSize": 4,
+    "[javascript]": {
+        "editor.defaultFormatter": "biomejs.biome"
+    },
+    "[typescript]": {
+        "editor.defaultFormatter": "biomejs.biome"
+    },
+    "[json]": {
+        "editor.defaultFormatter": "biomejs.biome"
+    },
+    "[jsonc]": {
+        "editor.defaultFormatter": "biomejs.biome"
+    },
+    "git.branchProtection": ["main"],
     "git.branchProtectionPrompt": "alwaysCommitToNewBranch",
     "git.branchRandomName.enable": true,
     "githubPullRequests.assignCreated": "${user}",

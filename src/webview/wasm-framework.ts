@@ -5,7 +5,7 @@ export abstract class WasmComponent extends HTMLElement {
 
     constructor() {
         super();
-        this.shadow = this.attachShadow({ mode: 'open' });
+        this.shadow = this.attachShadow({ mode: "open" });
     }
 
     /**
@@ -25,12 +25,12 @@ export abstract class WasmComponent extends HTMLElement {
      */
     protected getWasmString(): string {
         const wasm = WasmComponent.wasm;
-        if (!wasm) throw new Error('WASM engine is not initialized');
-        
+        if (!wasm) throw new Error("WASM engine is not initialized");
+
         const ptr = wasm.get_result_ptr();
         const len = wasm.get_result_len();
         const memory = new Uint8Array(wasm.memory.buffer, ptr, len);
-        return new TextDecoder('utf-8').decode(memory);
+        return new TextDecoder("utf-8").decode(memory);
     }
 
     /**
@@ -45,7 +45,7 @@ export abstract class WasmComponent extends HTMLElement {
                     this.scheduleUpdate();
                 }
                 return true;
-            }
+            },
         });
     }
 
@@ -89,7 +89,7 @@ export class WasmStore<T extends object> {
                     this.notify();
                 }
                 return true;
-            }
+            },
         });
     }
 
@@ -105,6 +105,8 @@ export class WasmStore<T extends object> {
     }
 
     private notify() {
-        this.subscribers.forEach(cb => cb());
+        for (const cb of this.subscribers) {
+            cb();
+        }
     }
 }

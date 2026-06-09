@@ -1,11 +1,11 @@
-import { WasmComponent, WasmStore } from './wasm-framework';
+import { WasmComponent, WasmStore } from "./wasm-framework";
 
 interface DashboardState {
     users: number;
     conversion: number;
     spend: number;
     growth: number;
-    tab: 'dashboard' | 'explorer';
+    tab: "dashboard" | "explorer";
     search: string;
 }
 
@@ -15,8 +15,8 @@ export const dashboardStore = new WasmStore<DashboardState>({
     conversion: 3.5,
     spend: 55,
     growth: 18,
-    tab: 'explorer',
-    search: ''
+    tab: "explorer",
+    search: "",
 });
 
 interface ExtensionItem {
@@ -28,12 +28,48 @@ interface ExtensionItem {
 }
 
 const EXTENSIONS: ExtensionItem[] = [
-    { name: 'Rust Analyzer', description: 'Advanced compiler support, linting, and diagnostics for Rust.', category: 'Languages', icon: '🦀', tags: ['rust', 'analyzer', 'compiler'] },
-    { name: 'GitLens', description: 'Supercharge Git inside VS Code with inline blame annotations.', category: 'Version Control', icon: '🌀', tags: ['git', 'history', 'blame'] },
-    { name: 'Prettier', description: 'Opinionated code formatter supporting TS, JS, CSS, and HTML.', category: 'Formatting', icon: '✨', tags: ['format', 'prettier', 'code-style'] },
-    { name: 'Docker UI', description: 'Manage containers, build images, and inspect networks from a sidebar.', category: 'Containers', icon: '🐳', tags: ['docker', 'containers', 'devops'] },
-    { name: 'Database Explorer', description: 'Connect to PostgreSQL, MySQL, and SQLite databases directly.', category: 'Database', icon: '🗄️', tags: ['sql', 'postgres', 'database', 'sqlite'] },
-    { name: 'Theme Designer', description: 'Live preview and compile custom editor color palettes.', category: 'Aesthetics', icon: '🎨', tags: ['theme', 'styles', 'colors', 'css'] },
+    {
+        name: "Rust Analyzer",
+        description: "Advanced compiler support, linting, and diagnostics for Rust.",
+        category: "Languages",
+        icon: "🦀",
+        tags: ["rust", "analyzer", "compiler"],
+    },
+    {
+        name: "GitLens",
+        description: "Supercharge Git inside VS Code with inline blame annotations.",
+        category: "Version Control",
+        icon: "🌀",
+        tags: ["git", "history", "blame"],
+    },
+    {
+        name: "Prettier",
+        description: "Opinionated code formatter supporting TS, JS, CSS, and HTML.",
+        category: "Formatting",
+        icon: "✨",
+        tags: ["format", "prettier", "code-style"],
+    },
+    {
+        name: "Docker UI",
+        description: "Manage containers, build images, and inspect networks from a sidebar.",
+        category: "Containers",
+        icon: "🐳",
+        tags: ["docker", "containers", "devops"],
+    },
+    {
+        name: "Database Explorer",
+        description: "Connect to PostgreSQL, MySQL, and SQLite databases directly.",
+        category: "Database",
+        icon: "🗄️",
+        tags: ["sql", "postgres", "database", "sqlite"],
+    },
+    {
+        name: "Theme Designer",
+        description: "Live preview and compile custom editor color palettes.",
+        category: "Aesthetics",
+        icon: "🎨",
+        tags: ["theme", "styles", "colors", "css"],
+    },
 ];
 
 // 2. Define the SettingsPanel component
@@ -120,12 +156,12 @@ export class SettingsPanel extends WasmComponent {
             </div>
         `;
 
-        this.shadow.getElementById('growth-input')?.addEventListener('input', (e) => {
-            state.growth = parseInt((e.target as HTMLInputElement).value);
+        this.shadow.getElementById("growth-input")?.addEventListener("input", (e) => {
+            state.growth = Number.parseInt((e.target as HTMLInputElement).value);
         });
     }
 }
-customElements.define('settings-panel', SettingsPanel);
+customElements.define("settings-panel", SettingsPanel);
 
 // 3. Define the main DashboardApp component
 export class DashboardApp extends WasmComponent {
@@ -158,12 +194,14 @@ export class DashboardApp extends WasmComponent {
 
         // Perform fuzzy search filtering for Explorer view
         const query = state.search.toLowerCase().trim();
-        const filteredExtensions = EXTENSIONS.filter(ext => {
+        const filteredExtensions = EXTENSIONS.filter((ext) => {
             if (!query) return true;
-            return ext.name.toLowerCase().includes(query) ||
-                   ext.description.toLowerCase().includes(query) ||
-                   ext.category.toLowerCase().includes(query) ||
-                   ext.tags.some(tag => tag.includes(query));
+            return (
+                ext.name.toLowerCase().includes(query) ||
+                ext.description.toLowerCase().includes(query) ||
+                ext.category.toLowerCase().includes(query) ||
+                ext.tags.some((tag) => tag.includes(query))
+            );
         });
 
         // Render shadow DOM structure
@@ -538,16 +576,18 @@ export class DashboardApp extends WasmComponent {
 
                 <!-- Navigation Tabs -->
                 <div class="nav-tabs">
-                    <button class="nav-btn ${state.tab === 'dashboard' ? 'active' : ''}" id="tab-dashboard">
+                    <button class="nav-btn ${state.tab === "dashboard" ? "active" : ""}" id="tab-dashboard">
                         Analytics
                     </button>
-                    <button class="nav-btn ${state.tab === 'explorer' ? 'active' : ''}" id="tab-explorer">
+                    <button class="nav-btn ${state.tab === "explorer" ? "active" : ""}" id="tab-explorer">
                         Explorer Mockup
                     </button>
                 </div>
 
                 <!-- Render Dashboard View -->
-                ${state.tab === 'dashboard' ? `
+                ${
+                    state.tab === "dashboard"
+                        ? `
                     <div class="grid">
                         <!-- Inputs Card -->
                         <div class="card-controls">
@@ -612,13 +652,13 @@ export class DashboardApp extends WasmComponent {
 
                             <div class="stat-card">
                                 <span class="stat-title">Monthly Revenue</span>
-                                <span class="stat-value stat-highlight">$${metrics.monthlyRevenue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span class="stat-value stat-highlight">$${metrics.monthlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 <span class="stat-desc">Monthly Recurring MRR run-rate</span>
                             </div>
 
                             <div class="stat-card">
                                 <span class="stat-title">Annualized Projection</span>
-                                <span class="stat-value">$${metrics.annualProjection.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span class="stat-value">$${metrics.annualProjection.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                 <span class="badge">Assuming +${state.growth}% growth</span>
                             </div>
 
@@ -629,7 +669,8 @@ export class DashboardApp extends WasmComponent {
                             </div>
                         </div>
                     </div>
-                ` : `
+                `
+                        : `
                     <!-- Render Explorer Grid View with Fuzzy Search -->
                     <div class="search-container">
                         <input 
@@ -641,9 +682,13 @@ export class DashboardApp extends WasmComponent {
                             autofocus
                         />
 
-                        ${filteredExtensions.length > 0 ? `
+                        ${
+                            filteredExtensions.length > 0
+                                ? `
                             <div class="menu-grid">
-                                ${filteredExtensions.map(ext => `
+                                ${filteredExtensions
+                                    .map(
+                                        (ext) => `
                                     <div class="menu-card">
                                         <div class="menu-icon">${ext.icon}</div>
                                         <div class="menu-content">
@@ -651,60 +696,65 @@ export class DashboardApp extends WasmComponent {
                                             <span class="menu-title">${ext.name}</span>
                                             <span class="menu-desc">${ext.description}</span>
                                             <div class="menu-tags">
-                                                ${ext.tags.map(tag => `<span class="tag">#${tag}</span>`).join('')}
+                                                ${ext.tags.map((tag) => `<span class="tag">#${tag}</span>`).join("")}
                                             </div>
                                         </div>
                                     </div>
-                                `).join('')}
+                                `,
+                                    )
+                                    .join("")}
                             </div>
-                        ` : `
+                        `
+                                : `
                             <div class="no-results">
                                 <p>🔍 No extensions matched your search term "${state.search}"</p>
                             </div>
-                        `}
+                        `
+                        }
                     </div>
-                `}
+                `
+                }
             </div>
         `;
 
         // Bind event listeners for Nav Tabs
-        this.shadow.getElementById('tab-dashboard')?.addEventListener('click', () => {
-            state.tab = 'dashboard';
+        this.shadow.getElementById("tab-dashboard")?.addEventListener("click", () => {
+            state.tab = "dashboard";
         });
-        this.shadow.getElementById('tab-explorer')?.addEventListener('click', () => {
-            state.tab = 'explorer';
+        this.shadow.getElementById("tab-explorer")?.addEventListener("click", () => {
+            state.tab = "explorer";
         });
 
         // Bind event listeners for Dashboard inputs
-        if (state.tab === 'dashboard') {
-            this.shadow.getElementById('users-input')?.addEventListener('input', (e) => {
-                state.users = parseInt((e.target as HTMLInputElement).value);
+        if (state.tab === "dashboard") {
+            this.shadow.getElementById("users-input")?.addEventListener("input", (e) => {
+                state.users = Number.parseInt((e.target as HTMLInputElement).value);
             });
 
-            this.shadow.getElementById('conversion-input')?.addEventListener('input', (e) => {
-                state.conversion = parseFloat((e.target as HTMLInputElement).value);
+            this.shadow.getElementById("conversion-input")?.addEventListener("input", (e) => {
+                state.conversion = Number.parseFloat((e.target as HTMLInputElement).value);
             });
 
-            this.shadow.getElementById('spend-input')?.addEventListener('input', (e) => {
-                state.spend = parseInt((e.target as HTMLInputElement).value);
+            this.shadow.getElementById("spend-input")?.addEventListener("input", (e) => {
+                state.spend = Number.parseInt((e.target as HTMLInputElement).value);
             });
         }
 
         // Bind event listener for Explorer search
-        if (state.tab === 'explorer') {
-            const searchInput = this.shadow.getElementById('search-input') as HTMLInputElement;
-            searchInput?.addEventListener('input', (e) => {
+        if (state.tab === "explorer") {
+            const searchInput = this.shadow.getElementById("search-input") as HTMLInputElement;
+            searchInput?.addEventListener("input", (e) => {
                 state.search = (e.target as HTMLInputElement).value;
             });
             // Restore focus and cursor position to prevent loss of focus on re-render
             if (searchInput) {
                 searchInput.focus();
                 const val = searchInput.value;
-                searchInput.value = '';
+                searchInput.value = "";
                 searchInput.value = val;
             }
         }
     }
 }
 
-customElements.define('dashboard-app', DashboardApp);
+customElements.define("dashboard-app", DashboardApp);

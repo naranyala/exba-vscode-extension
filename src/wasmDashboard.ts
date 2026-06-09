@@ -1,17 +1,17 @@
-import * as vscode from 'vscode';
-import * as fs from 'fs';
+import * as fs from "node:fs";
+import * as vscode from "vscode";
 
 export function registerWasmDashboard(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-        vscode.commands.registerCommand('samples.showDashboard', () => {
+        vscode.commands.registerCommand("samples.showDashboard", () => {
             WasmDashboardPanel.createOrShow(context.extensionUri);
-        })
+        }),
     );
 }
 
 class WasmDashboardPanel {
     public static currentPanel: WasmDashboardPanel | undefined;
-    public static readonly viewType = 'wasmDashboard';
+    public static readonly viewType = "wasmDashboard";
 
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
@@ -29,14 +29,12 @@ class WasmDashboardPanel {
 
         const panel = vscode.window.createWebviewPanel(
             WasmDashboardPanel.viewType,
-            'WASM Web Component Dashboard',
+            "WASM Web Component Dashboard",
             column || vscode.ViewColumn.One,
             {
                 enableScripts: true,
-                localResourceRoots: [
-                    vscode.Uri.joinPath(extensionUri, 'dist')
-                ]
-            }
+                localResourceRoots: [vscode.Uri.joinPath(extensionUri, "dist")],
+            },
         );
 
         WasmDashboardPanel.currentPanel = new WasmDashboardPanel(panel, extensionUri);
@@ -64,23 +62,29 @@ class WasmDashboardPanel {
 
     private _update() {
         const webview = this._panel.webview;
-        
-        // Resolve resource URIs relative to unified dist folder
-        const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'bundle.js'));
-        const cssUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'index.css'));
-        const wasmUri = webview.asWebviewUri(vscode.Uri.joinPath(this._extensionUri, 'dist', 'wasm', 'dashboard_engine.wasm'));
 
-        const htmlPath = vscode.Uri.joinPath(this._extensionUri, 'dist', 'webview', 'index.html');
-        let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf8');
+        // Resolve resource URIs relative to unified dist folder
+        const scriptUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "bundle.js"),
+        );
+        const cssUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "index.css"),
+        );
+        const wasmUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this._extensionUri, "dist", "wasm", "dashboard_engine.wasm"),
+        );
+
+        const htmlPath = vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "index.html");
+        let htmlContent = fs.readFileSync(htmlPath.fsPath, "utf8");
 
         // Dynamically inject compiled URIs into index.html shell
         htmlContent = htmlContent
-            .replace('bundle.js', scriptUri.toString())
-            .replace('index.css', cssUri.toString());
+            .replace("bundle.js", scriptUri.toString())
+            .replace("index.css", cssUri.toString());
 
         this._panel.webview.html = htmlContent.replace(
-            '<body>',
-            `<body data-wasm-uri="${wasmUri.toString()}">`
+            "<body>",
+            `<body data-wasm-uri="${wasmUri.toString()}">`,
         );
     }
 }

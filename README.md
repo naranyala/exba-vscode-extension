@@ -66,6 +66,25 @@ This script compiles Rust to WebAssembly and copies the binary to `dist/wasm/das
     - `Samples: WASM Web Component Dashboard`
 5.  Check the **Package Explorer** icon in the Sidebar to view your workspace dependencies.
 
+### 5. Formatting & Linting
+
+This project uses [Biome](https://biomejs.dev/) for rapid, zero-dependency formatting, import organization, and linting.
+
+To auto-format files:
+```bash
+bun run format
+```
+
+To check for linting issues:
+```bash
+bun run lint
+```
+
+To check and apply safe fixes for formatting, linting, and imports in one command:
+```bash
+bun run check
+```
+
 ---
 
 ## 📦 Packaging & Publishing
