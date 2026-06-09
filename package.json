@@ -1,23 +1,71 @@
 {
-	"name": "vsc-extension-samples",
-	"license": "MIT",
-	"publisher": "Microsoft",
-	"version": "0.0.1",
-	"private": true,
-	"scripts": {
-		"compile-all": "tsx .scripts/run-script.ts compile",
-		"lint-all": "tsx .scripts/run-script.ts lint",
-		"install-all": "tsx .scripts/run-command.ts bun install",
-		"audit-fix-all": "tsx .scripts/run-command.ts bun update",
-		"format-all": "tsx .scripts/format",
-		"update-readme": "tsx .scripts/update-readme.ts",
-		"update-lsif": "tsx .scripts/update-lsif.ts",
-		"validate": "tsx .scripts/validate.ts"
+	"name": "vscode-extension-starter-showcase",
+	"displayName": "Unified VS Code Extension Starter & Showcase",
+	"description": "A streamlined unified extension starter showcasing commands, tree views, webviews, and Rust-WASM Custom Web Components.",
+	"version": "1.0.0",
+	"publisher": "vscode-samples",
+	"engines": {
+		"vscode": "^1.100.0"
+	},
+	"main": "./dist/extension.js",
+	"activationEvents": [],
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "package-explorer",
+					"title": "Package Explorer",
+					"icon": "media/dep.svg"
+				}
+			]
+		},
+		"views": {
+			"package-explorer": [
+				{
+					"id": "nodeDependencies",
+					"name": "Node Dependencies",
+					"icon": "media/dep.svg",
+					"contextualTitle": "Package Explorer"
+				}
+			]
+		},
+		"commands": [
+			{
+				"command": "samples.helloWorld",
+				"category": "Samples",
+				"title": "Samples: Hello World"
+			},
+			{
+				"command": "samples.showWebview",
+				"category": "Samples",
+				"title": "Samples: Webview Demo (Cat)"
+			},
+			{
+				"command": "samples.showDashboard",
+				"category": "Samples",
+				"title": "Samples: WASM Web Component Dashboard"
+			},
+			{
+				"command": "nodeDependencies.refreshEntry",
+				"category": "Samples",
+				"title": "Refresh Dependencies",
+				"icon": {
+					"light": "media/dep.svg",
+					"dark": "media/dep.svg"
+				}
+			}
+		]
 	},
 	"devDependencies": {
-		"@types/node": "^22.8.2",
-		"glob": "^11.0.0",
-		"tsx": "^4.19.2",
-		"typescript": "^5.8.2"
+		"@types/node": "^22",
+		"@types/vscode": "^1.100.0",
+		"esbuild": "^0.25.0",
+		"typescript": "^5.9.2"
+	},
+	"scripts": {
+		"vscode:prepublish": "bun run build",
+		"build:rust": "cargo build --target wasm32-unknown-unknown --manifest-path src/rust-core/Cargo.toml",
+		"build:js": "node ./bin/esbuild.js",
+		"build": "bun run build:rust && bun run build:js"
 	}
 }
