@@ -1,5 +1,15 @@
 use std::mem;
 
+extern "C" {
+    fn js_log(ptr: *const u8, len: usize);
+}
+
+fn log(s: &str) {
+    unsafe {
+        js_log(s.as_ptr(), s.len());
+    }
+}
+
 static mut RESULT_BUF: Vec<u8> = Vec::new();
 
 fn set_result(s: &str) {
@@ -35,6 +45,7 @@ pub extern "C" fn dealloc(ptr: *mut u8, size: usize) {
 
 #[no_mangle]
 pub extern "C" fn calculate_metrics(users: u32, conversion_rate: f32, avg_spend: f32, growth_rate: f32) {
+    log(&format!("Calculating metrics for {} users...", users));
     // 1. Calculate main metrics
     let active_customers = (users as f32 * (conversion_rate / 100.0)) as u32;
     let monthly_revenue = active_customers as f32 * avg_spend;
@@ -49,3 +60,40 @@ pub extern "C" fn calculate_metrics(users: u32, conversion_rate: f32, avg_spend:
     
     set_result(&json_str);
 }
+
+#[no_mangle]
+pub extern "C" fn score_search(query_ptr: *const u8, query_len: usize, target_ptr: *const u8, target_len: usize) -> i32 {
+    let query = unsafe {
+        let slice = std::slice::from_raw_parts(query_ptr, query_len);
+        std::str::from_utf8_unchecked(slice)
+    }.to_lowercase();
+
+    let target = unsafe {
+        let slice = std::slice::from_raw_parts(target_ptr, target_len);
+        std::str::from_utf8_unchecked(slice)
+    }.to_lowercase();
+
+    log(&format!("Scoring query '{}' against target...", query));
+
+    if query.is_empty() {
+        return 100;
+    }
+
+    if target.contains(&query) {
+        return 100 - (target.len() as i32 - query.len() as i32);
+    }
+
+    // Simple fuzzy match: count how many characters of query appear in target in order
+    let mut score = 0;
+    let mut target_chars = target.chars();
+    for q_char in query.chars() {
+        if let Some(_) = target_chars.find(|&t_char| t_char == q_char) {
+            score += 10;
+        } else {
+            score -= 5;
+        }
+    }
+
+    score
+}
+

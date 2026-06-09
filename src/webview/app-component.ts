@@ -1,5 +1,5 @@
 import { WasmComponent, signal } from "./wasm-framework";
-import { callWasm, debounce, formatCurrency, formatNumber } from "./utils";
+import { callWasm, debounce, formatCurrency, formatNumber, passStringToWasm } from "./utils";
 
 // 1. Create reactive signals shared by all components
 const [getUsers, setUsers] = signal(25000);
@@ -194,17 +194,26 @@ export class DashboardApp extends WasmComponent {
         // Call the Rust WebAssembly engine using utility
         const metrics = callWasm(wasm, "calculate_metrics", users, conversion, spend, growth);
 
-        // Perform fuzzy search filtering for Explorer view
+        // Perform fuzzy search filtering for Explorer view using Rust WASM scoring
         const query = search.toLowerCase().trim();
-        const filteredExtensions = EXTENSIONS.filter((ext) => {
-            if (!query) return true;
-            return (
-                ext.name.toLowerCase().includes(query) ||
-                ext.description.toLowerCase().includes(query) ||
-                ext.category.toLowerCase().includes(query) ||
-                ext.tags.some((tag) => tag.includes(query))
-            );
-        });
+        const filteredExtensions = EXTENSIONS.map((ext) => {
+            if (!query) return { ...ext, score: 100 };
+
+            // Pass strings to Rust for scoring
+            const [qPtr, qLen] = passStringToWasm(wasm, query);
+            const targetText = `${ext.name} ${ext.description} ${ext.category} ${ext.tags.join(" ")}`;
+            const [tPtr, tLen] = passStringToWasm(wasm, targetText);
+
+            const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
+
+            // Clean up WASM memory
+            wasm.dealloc(qPtr, qLen);
+            wasm.dealloc(tPtr, tLen);
+
+            return { ...ext, score };
+        })
+            .filter((item) => item.score > 0)
+            .sort((a, b) => b.score - a.score);
 
         return `
             <style>
@@ -697,7 +706,10 @@ export class DashboardApp extends WasmComponent {
                                     <div class="menu-card">
                                         <div class="menu-icon">${ext.icon}</div>
                                         <div class="menu-content">
-                                            <span class="menu-category">${ext.category}</span>
+                                            <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                                <span class="menu-category">${ext.category}</span>
+                                                ${query ? `<span style="font-size: 0.6rem; color: #4ade80; font-weight: 800;">MATCH: ${ext.score}</span>` : ""}
+                                            </div>
                                             <span class="menu-title">${ext.name}</span>
                                             <span class="menu-desc">${ext.description}</span>
                                             <div class="menu-tags">

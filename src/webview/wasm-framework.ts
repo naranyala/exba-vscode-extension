@@ -109,7 +109,19 @@ export abstract class WasmComponent extends HTMLElement {
         if (!WasmComponent.wasm) {
             const response = await fetch(wasmUri);
             const buffer = await response.arrayBuffer();
-            const { instance } = await WebAssembly.instantiate(buffer);
+
+            const importObject = {
+                env: {
+                    js_log: (ptr: number, len: number) => {
+                        const wasm = WasmComponent.wasm;
+                        const memory = new Uint8Array(wasm.memory.buffer, ptr, len);
+                        const message = new TextDecoder("utf-8").decode(memory);
+                        console.log(`[RUST] ${message}`);
+                    },
+                },
+            };
+
+            const { instance } = await WebAssembly.instantiate(buffer, importObject);
             WasmComponent.wasm = instance.exports;
         }
     }
