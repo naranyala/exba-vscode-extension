@@ -46,6 +46,21 @@
                 "title": "Samples: WASM Web Component Dashboard"
             },
             {
+                "command": "samples.listWorkspaceFiles",
+                "category": "Samples",
+                "title": "Samples: List Workspace Files"
+            },
+            {
+                "command": "samples.insertSnippet",
+                "category": "Samples",
+                "title": "Samples: Insert Snippet"
+            },
+            {
+                "command": "samples.showAdvancedPrompt",
+                "category": "Samples",
+                "title": "Samples: Show Advanced Prompt"
+            },
+            {
                 "command": "nodeDependencies.refreshEntry",
                 "category": "Samples",
                 "title": "Refresh Dependencies",
@@ -64,16 +79,19 @@
     },
     "devDependencies": {
         "@biomejs/biome": "^1.9.4",
+        "@rsbuild/core": "^2.0.11",
+        "@rspack/cli": "^2.0.6",
         "@types/node": "^22",
         "@types/vscode": "^1.100.0",
         "@vscode/test-electron": "^2.4.1",
         "esbuild": "^0.25.0",
+        "rspack": "^0.1.1",
         "typescript": "^5.9.2"
     },
     "scripts": {
         "vscode:prepublish": "bun run build",
         "build:rust": "cargo build --target wasm32-unknown-unknown --manifest-path src/rust/Cargo.toml",
-        "build:js": "node ./bin/esbuild.js",
+        "build:js": "node ./bin/build.js",
         "build": "bun run build:rust && bun run build:js",
         "lint": "biome lint .",
         "format": "biome format --write .",

@@ -1,111 +1,92 @@
 # Unified VS Code Extension Starter & Showcase
 
-This repository is a curated, high-quality starting point for building Visual Studio Code extensions. It consolidates multiple VS Code API features into a **single extension project** configured for the **Bun** runtime.
+A comprehensive starter kit and demonstration platform for modern Visual Studio Code extensions. This project showcases advanced extension patterns, including high-performance Rust-powered WebAssembly (WASM) integration within VS Code Webviews and reactive custom web components.
 
----
+## Overview
 
-## 🌟 Showcased Features
+This project is designed to serve as a blueprint for developers building sophisticated extensions. It moves beyond basic command implementations to demonstrate how to leverage native performance for heavy computations and modern web technologies for rich, reactive user interfaces within the VS Code environment.
 
-This starter contains 4 distinct API demonstrations activated within a single extension instance:
+## Key Features
 
-1.  **Hello World** (`samples.helloWorld`): Demonstrates basic commands, menu contributions, and system notification messages.
-2.  **Tree View** (`nodeDependencies`): A custom Explorer/Sidebar view that reads the current workspace's `package.json` file and displays dependencies inside a native TreeView.
-3.  **Webview (Cat)** (`samples.showWebview`): Demonstrates opening a standard HTML/CSS webview panel and serving a local media asset (`cat.gif`).
-4.  **WASM Web Component Dashboard** (`samples.showDashboard`): Renders a browser-native Custom Element dashboard backed by a high-performance, zero-dependency Rust-WASM engine ([src/rust/](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/rust)). Key features of this implementation include:
-    - **Explorer Grid with Fuzzy Search**: (Default view) Lists tool cards with category badges and tag chips, filtered instantly as you type via reactive fuzzy search.
-    - **Proxy-Based Reactive State**: A custom state container ([wasm-framework.ts](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/webview/wasm-framework.ts)) implementing reactivity via ES6 Proxies and batching updates inside `requestAnimationFrame`.
-    - **Global Shared Store (`WasmStore`)**: Synchronizes settings and calculation inputs between separate Custom Elements (`<dashboard-app>` and `<settings-panel>`).
-    - **Dynamic Rust Calculator**: Rust backend calculations recalculate metrics in real-time based on the shared Web Component state.
+* **Rust-WASM Integration**: Demonstrates how to compile Rust code to WebAssembly and execute it within a VS Code Webview for high-performance data processing.
+* **Reactive Web Components**: Showcases a custom-built, signal-based reactivity system implemented using native Web Components for efficient UI updates in Webviews.
+* **Advanced UI Patterns**: Implements complex UI elements including a dashboard with real-time metric calculations and an explorer mockup with fuzzy search capabilities.
+* **Tree View Implementation**: Demonstrates the integration of custom views into the VS Code Activity Bar and Side Bar.
+* **Unified Build Pipeline**: A streamlined build process orchestrated by Bun, leveraging Cargo for Rust/WASM compilation and esbuild for optimized JavaScript bundling.
 
----
+## Technology Stack
 
-## 📂 Project Structure
+* **Languages**: TypeScript (Extension and Webview), Rust (WASM Engine)
+* **Runtime & Tooling**: Bun, Node.js, Cargo
+* **Bundler**: esbuild
+* **APIs**: VS Code Extension API (Webview, Tree View, Commands)
+* **Web Technologies**: Custom Elements, WebAssembly, CSS3 (Flexbox, Grid, Animations)
 
-- [package.json](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/package.json): Defines extension activation events, commands, views, scripts, and dependencies (including `@vscode/webview-ui-toolkit` and language servers).
-- [tsconfig.json](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/tsconfig.json): TypeScript configuration supporting both Node (extension host) and DOM (webview frontend) code.
-- [esbuild.js](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/bin/esbuild.js): Bundles the extension host and webview files, copies UI resources, and copies compiled WASM binaries to `dist/`.
-- `src/extension.ts`: Main entry point activating the features.
-- `src/*.ts`: Feature controllers (Hello World, Tree View, Webview, and WASM Dashboard).
-- `src/webview/`: Browser-native Custom Element components and Proxy-based reactive state framework.
-- `src/rust/`: Rust library compiling to WebAssembly.
-- `media/`: Static assets (icons and images).
+## Project Structure
 
----
+```text
+.
+├── bin/                # Build utility scripts
+├── src/
+│   ├── extension.ts    # Main extension entry point
+│   ├── helloWorld.ts   # Basic command sample
+│   ├── treeView.ts     # Tree view implementation
+│   ├── wasmDashboard.ts# Webview panel management
+│   ├── webviewDemo.ts  # Webview sample implementation
+│   ├── rust/           # Rust source code for WASM engine
+│   │   └── src/        # Rust logic (metric calculations)
+│   └── webview/        # Webview frontend source
+│       ├── app-component.ts # Reactive custom elements
+│       ├── wasm-framework.ts# WASM integration layer
+│       └── ...         # HTML, CSS, and Utils
+├── package.json        # Project configuration and scripts
+└── tsconfig.json       # TypeScript configuration
+```
 
-## 🚀 How to Run and Test Locally
+## Getting Started
 
-### 1. Prerequisites
-Ensure you have the following toolchains installed:
-- **Bun**: Javascript runtime and package manager (`bun --version`).
-- **Rust & Cargo**: Required for WASM compilation.
-- **wasm32-unknown-unknown target**:
-  ```bash
-  rustup target add wasm32-unknown-unknown
-  ```
+### Prerequisites
 
-### 2. Setup
-Install project dependencies:
+Ensure you have the following installed on your system:
+
+* **Node.js** (LTS recommended)
+* **Bun** (for task orchestration)
+* **Rust & Cargo** (for WASM compilation)
+
+### Installation
+
+1. Clone the repository.
+2. Install dependencies using Bun:
+
 ```bash
 bun install
 ```
 
-### 3. Build
-Compile the Rust target and bundle the TypeScript assets with a single command:
+### Building the Project
+
+The build process compiles the Rust engine to WASM, bundles the webview assets, and prepares the extension distribution.
+
 ```bash
 bun run build
 ```
-This script compiles Rust to WebAssembly and copies the binary to `dist/wasm/dashboard_engine.wasm`.
 
-### 4. Running the Extension
-1.  Open the workspace folder in VS Code.
-2.  Press **F5** (or select **Launch Extension** in the Debug tab).
-3.  A new **Extension Development Host** VS Code window will open.
-4.  Run commands from the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`):
-    - `Samples: Hello World`
-    - `Samples: Webview Demo (Cat)`
-    - `Samples: WASM Web Component Dashboard`
-5.  Check the **Package Explorer** icon in the Sidebar to view your workspace dependencies.
+This command executes:
+1. `cargo build --target wasm32-unknown-unknown` to compile the Rust engine.
+2. `node ./bin/esbuild.js` to bundle the TypeScript/Webview assets.
 
-### 5. Formatting & Linting
+### Running and Debugging
 
-This project uses [Biome](https://biomejs.dev/) for rapid, zero-dependency formatting, import organization, and linting.
+1. Open the project in Visual Studio Code.
+2. Press `F5` to launch a new VS Code instance with the extension loaded.
+3. Use the "Samples" command palette to trigger the different showcases:
+    * `Samples: Hello World`
+    * `Samples: Webview Demo (Cat)`
+    * `Samples: WASM Web Component Dashboard`
 
-To auto-format files:
-```bash
-bun run format
-```
+## Development Commands
 
-To check for linting issues:
-```bash
-bun run lint
-```
-
-To check and apply safe fixes for formatting, linting, and imports in one command:
-```bash
-bun run check
-```
-
----
-
-## 📦 Packaging & Publishing
-
-To package your extension into a `.vsix` file for distribution or marketplace upload:
-
-1.  **Install VSCE globally**:
-    ```bash
-    bun install --global @vscode/vsce
-    ```
-2.  **Compile Rust in Release Mode**:
-    ```bash
-    cargo build --target wasm32-unknown-unknown --release --manifest-path src/rust/Cargo.toml
-    ```
-3.  **Run Javascript Bundler**:
-    ```bash
-    bun run build:js
-    ```
-    *(The build script will detect the release WASM file and copy it to `dist/wasm/` automatically)*.
-4.  **Package**:
-    ```bash
-    vsce package
-    ```
-    This generates a `.vsix` package. You can manually install this VSIX file in VS Code or publish it to the Marketplace using `vsce publish`.
+* `bun run build`: Full build of Rust and JS assets.
+* `bun run build:rust`: Only build the Rust WASM component.
+* `bun run build:js`: Only build the JavaScript/Webview assets.
+* `bun run lint`: Run Biome linter.
+* `bun run format`: Format code using Biome.
