@@ -1,23 +1,13 @@
-import { WasmComponent, WasmStore } from "./wasm-framework";
+import { WasmComponent, signal } from "./wasm-framework";
+import { callWasm, debounce, formatCurrency, formatNumber } from "./utils";
 
-interface DashboardState {
-    users: number;
-    conversion: number;
-    spend: number;
-    growth: number;
-    tab: "dashboard" | "explorer";
-    search: string;
-}
-
-// 1. Create a reactive global store shared by all components
-export const dashboardStore = new WasmStore<DashboardState>({
-    users: 25000,
-    conversion: 3.5,
-    spend: 55,
-    growth: 18,
-    tab: "explorer",
-    search: "",
-});
+// 1. Create reactive signals shared by all components
+const [getUsers, setUsers] = signal(25000);
+const [getConversion, setConversion] = signal(3.5);
+const [getSpend, setSpend] = signal(55);
+const [getGrowth, setGrowth] = signal(18);
+const [getTab, setTab] = signal<"dashboard" | "explorer">("explorer");
+const [getSearch, setSearch] = signal("");
 
 interface ExtensionItem {
     name: string;
@@ -74,18 +64,13 @@ const EXTENSIONS: ExtensionItem[] = [
 
 // 2. Define the SettingsPanel component
 export class SettingsPanel extends WasmComponent {
-    constructor() {
-        super();
-        this.connectStore(dashboardStore);
+    handleGrowth(e: Event) {
+        setGrowth(Number.parseInt((e.target as HTMLInputElement).value));
     }
 
-    connectedCallback() {
-        this.render();
-    }
-
-    render() {
-        const state = dashboardStore.state;
-        this.shadow.innerHTML = `
+    template(): string {
+        const growth = getGrowth();
+        return `
             <style>
                 :host {
                     display: block;
@@ -142,58 +127,75 @@ export class SettingsPanel extends WasmComponent {
                 <div class="row">
                     <div class="row-header">
                         <span class="label">Target Growth</span>
-                        <span class="value">+${state.growth}%</span>
+                        <span class="value">+${growth}%</span>
                     </div>
                     <input 
                         type="range" 
                         min="5" 
                         max="50" 
                         step="1"
-                        .value="${state.growth}" 
+                        value="${growth}" 
                         id="growth-input"
+                        on-input="handleGrowth"
                     />
                 </div>
             </div>
         `;
-
-        this.shadow.getElementById("growth-input")?.addEventListener("input", (e) => {
-            state.growth = Number.parseInt((e.target as HTMLInputElement).value);
-        });
     }
 }
 customElements.define("settings-panel", SettingsPanel);
 
 // 3. Define the main DashboardApp component
 export class DashboardApp extends WasmComponent {
-    constructor() {
-        super();
-        this.connectStore(dashboardStore);
+    // Action Handlers
+    handleUsers(e: Event) {
+        setUsers(Number.parseInt((e.target as HTMLInputElement).value));
     }
 
-    connectedCallback() {
-        this.render();
+    handleConversion(e: Event) {
+        setConversion(Number.parseFloat((e.target as HTMLInputElement).value));
     }
 
-    render() {
+    handleSpend(e: Event) {
+        setSpend(Number.parseInt((e.target as HTMLInputElement).value));
+    }
+
+    // Debounced search handler
+    handleSearch = debounce((e: Event) => {
+        setSearch((e.target as HTMLInputElement).value);
+    }, 200);
+
+    handleTabDashboard() {
+        setTab("dashboard");
+    }
+
+    handleTabExplorer() {
+        setTab("explorer");
+    }
+
+    template(): string {
         const wasm = WasmComponent.wasm;
         if (!wasm) {
-            this.shadow.innerHTML = `
+            return `
                 <div class="loading">
                     <div class="spinner"></div>
                     <p>Initializing WASM calculation engine...</p>
                 </div>
             `;
-            return;
         }
 
-        const state = dashboardStore.state;
+        const users = getUsers();
+        const conversion = getConversion();
+        const spend = getSpend();
+        const growth = getGrowth();
+        const tab = getTab();
+        const search = getSearch();
 
-        // Call the Rust WebAssembly engine
-        wasm.calculate_metrics(state.users, state.conversion, state.spend, state.growth);
-        const metrics = JSON.parse(this.getWasmString());
+        // Call the Rust WebAssembly engine using utility
+        const metrics = callWasm(wasm, "calculate_metrics", users, conversion, spend, growth);
 
         // Perform fuzzy search filtering for Explorer view
-        const query = state.search.toLowerCase().trim();
+        const query = search.toLowerCase().trim();
         const filteredExtensions = EXTENSIONS.filter((ext) => {
             if (!query) return true;
             return (
@@ -204,8 +206,7 @@ export class DashboardApp extends WasmComponent {
             );
         });
 
-        // Render shadow DOM structure
-        this.shadow.innerHTML = `
+        return `
             <style>
                 :host {
                     display: block;
@@ -576,17 +577,17 @@ export class DashboardApp extends WasmComponent {
 
                 <!-- Navigation Tabs -->
                 <div class="nav-tabs">
-                    <button class="nav-btn ${state.tab === "dashboard" ? "active" : ""}" id="tab-dashboard">
+                    <button class="nav-btn ${tab === "dashboard" ? "active" : ""}" id="tab-dashboard" on-click="handleTabDashboard">
                         Analytics
                     </button>
-                    <button class="nav-btn ${state.tab === "explorer" ? "active" : ""}" id="tab-explorer">
+                    <button class="nav-btn ${tab === "explorer" ? "active" : ""}" id="tab-explorer" on-click="handleTabExplorer">
                         Explorer Mockup
                     </button>
                 </div>
 
                 <!-- Render Dashboard View -->
                 ${
-                    state.tab === "dashboard"
+                    tab === "dashboard"
                         ? `
                     <div class="grid">
                         <!-- Inputs Card -->
@@ -594,45 +595,48 @@ export class DashboardApp extends WasmComponent {
                             <div class="control-group">
                                 <div class="control-header">
                                     <span class="label">Audience Size</span>
-                                    <span class="value">${state.users.toLocaleString()}</span>
+                                    <span class="value">${users.toLocaleString()}</span>
                                 </div>
                                 <input 
                                     type="range" 
                                     min="1000" 
                                     max="100000" 
                                     step="500" 
-                                    .value="${state.users}" 
+                                    value="${users}" 
                                     id="users-input"
+                                    on-input="handleUsers"
                                 />
                             </div>
 
                             <div class="control-group">
                                 <div class="control-header">
                                     <span class="label">Conversion Rate</span>
-                                    <span class="value">${state.conversion.toFixed(1)}%</span>
+                                    <span class="value">${conversion.toFixed(1)}%</span>
                                 </div>
                                 <input 
                                     type="range" 
                                     min="0.1" 
                                     max="20" 
                                     step="0.1" 
-                                    .value="${state.conversion}" 
+                                    value="${conversion}" 
                                     id="conversion-input"
+                                    on-input="handleConversion"
                                 />
                             </div>
 
                             <div class="control-group">
                                 <div class="control-header">
                                     <span class="label">Average Spend</span>
-                                    <span class="value">$${state.spend}</span>
+                                    <span class="value">$${spend}</span>
                                 </div>
                                 <input 
                                     type="range" 
                                     min="5" 
                                     max="500" 
                                     step="5" 
-                                    .value="${state.spend}" 
+                                    value="${spend}" 
                                     id="spend-input"
+                                    on-input="handleSpend"
                                 />
                             </div>
 
@@ -646,20 +650,20 @@ export class DashboardApp extends WasmComponent {
                         <div class="stats-grid">
                             <div class="stat-card">
                                 <span class="stat-title">Active Customers</span>
-                                <span class="stat-value">${metrics.activeCustomers.toLocaleString()}</span>
+                                <span class="stat-value">${formatNumber(metrics.activeCustomers)}</span>
                                 <span class="stat-desc">Converting visitors base</span>
                             </div>
 
                             <div class="stat-card">
                                 <span class="stat-title">Monthly Revenue</span>
-                                <span class="stat-value stat-highlight">$${metrics.monthlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                <span class="stat-value stat-highlight">${formatCurrency(metrics.monthlyRevenue)}</span>
                                 <span class="stat-desc">Monthly Recurring MRR run-rate</span>
                             </div>
 
                             <div class="stat-card">
                                 <span class="stat-title">Annualized Projection</span>
-                                <span class="stat-value">$${metrics.annualProjection.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                                <span class="badge">Assuming +${state.growth}% growth</span>
+                                <span class="stat-value">${formatCurrency(metrics.annualProjection)}</span>
+                                <span class="badge">Assuming +${growth}% growth</span>
                             </div>
 
                             <div class="stat-card" style="border-color: rgba(239, 68, 68, 0.05)">
@@ -677,8 +681,9 @@ export class DashboardApp extends WasmComponent {
                             type="text" 
                             class="search-box" 
                             placeholder="Fuzzy search extensions (e.g. rust, format, docker)..." 
-                            .value="${state.search}" 
+                            value="${search}" 
                             id="search-input"
+                            on-input="handleSearch"
                             autofocus
                         />
 
@@ -707,7 +712,7 @@ export class DashboardApp extends WasmComponent {
                         `
                                 : `
                             <div class="no-results">
-                                <p>🔍 No extensions matched your search term "${state.search}"</p>
+                                <p>🔍 No extensions matched your search term "${search}"</p>
                             </div>
                         `
                         }
@@ -716,44 +721,6 @@ export class DashboardApp extends WasmComponent {
                 }
             </div>
         `;
-
-        // Bind event listeners for Nav Tabs
-        this.shadow.getElementById("tab-dashboard")?.addEventListener("click", () => {
-            state.tab = "dashboard";
-        });
-        this.shadow.getElementById("tab-explorer")?.addEventListener("click", () => {
-            state.tab = "explorer";
-        });
-
-        // Bind event listeners for Dashboard inputs
-        if (state.tab === "dashboard") {
-            this.shadow.getElementById("users-input")?.addEventListener("input", (e) => {
-                state.users = Number.parseInt((e.target as HTMLInputElement).value);
-            });
-
-            this.shadow.getElementById("conversion-input")?.addEventListener("input", (e) => {
-                state.conversion = Number.parseFloat((e.target as HTMLInputElement).value);
-            });
-
-            this.shadow.getElementById("spend-input")?.addEventListener("input", (e) => {
-                state.spend = Number.parseInt((e.target as HTMLInputElement).value);
-            });
-        }
-
-        // Bind event listener for Explorer search
-        if (state.tab === "explorer") {
-            const searchInput = this.shadow.getElementById("search-input") as HTMLInputElement;
-            searchInput?.addEventListener("input", (e) => {
-                state.search = (e.target as HTMLInputElement).value;
-            });
-            // Restore focus and cursor position to prevent loss of focus on re-render
-            if (searchInput) {
-                searchInput.focus();
-                const val = searchInput.value;
-                searchInput.value = "";
-                searchInput.value = val;
-            }
-        }
     }
 }
 

@@ -1,7 +1,101 @@
+/**
+ * A simple signal-based reactivity system.
+ */
+let dependencyTracker: (() => void)[] = [];
+
+export function signal<T>(initialValue: T) {
+    let value = initialValue;
+    const subscribers = new Set<() => void>();
+
+    const getter = () => {
+        if (dependencyTracker.length > 0) {
+            subscribers.add(dependencyTracker[dependencyTracker.length - 1]);
+        }
+        return value;
+    };
+
+    const setter = (newValue: T) => {
+        if (value !== newValue) {
+            value = newValue;
+            subscribers.forEach((cb) => cb());
+        }
+    };
+
+    return [getter, setter] as const;
+}
+
+export function effect(fn: () => void) {
+    const runner = () => {
+        dependencyTracker.push(runner);
+        try {
+            fn();
+        } finally {
+            dependencyTracker.pop();
+        }
+    };
+    runner();
+}
+
+/**
+ * Handles DOM reconciliation, event delegation, and input synchronization.
+ */
+class DOMRenderer {
+    static render(shadow: ShadowRoot, html: string, component: WasmComponent) {
+        // Track the currently focused element inside shadow root
+        const activeElementId = shadow.activeElement?.id;
+        const selectionStart = (shadow.activeElement as HTMLInputElement)?.selectionStart;
+        const selectionEnd = (shadow.activeElement as HTMLInputElement)?.selectionEnd;
+
+        // Apply new template HTML
+        shadow.innerHTML = html;
+
+        // 1. Synchronize input element properties
+        const inputs = shadow.querySelectorAll("input, select, textarea");
+        for (const el of Array.from(inputs)) {
+            const inputEl = el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+            const valAttr = inputEl.getAttribute("value");
+            if (valAttr !== null) {
+                inputEl.value = valAttr;
+            }
+        }
+
+        // 2. Discover and bind declarative event handlers (attributes starting with 'on-')
+        const allElements = shadow.querySelectorAll("*");
+        for (const el of Array.from(allElements)) {
+            for (const attr of Array.from(el.attributes)) {
+                if (attr.name.startsWith("on-")) {
+                    const eventName = attr.name.slice(3); // e.g., "click" from "on-click"
+                    const handlerName = attr.value;
+                    const handler = (component as any)[handlerName];
+
+                    if (typeof handler === "function") {
+                        el.addEventListener(eventName, (e) => handler.call(component, e));
+                    }
+                    el.removeAttribute(attr.name);
+                }
+            }
+        }
+
+        // 3. Restore focus and selection positions
+        if (activeElementId) {
+            const el = shadow.getElementById(activeElementId) as HTMLInputElement;
+            if (el) {
+                el.focus();
+                if (selectionStart !== null && selectionEnd !== null && (el.type === "text" || el.type === "search")) {
+                    el.setSelectionRange(selectionStart, selectionEnd);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * WasmComponent - A reactive, lightweight Web Component base class
+ * that integrates with a WebAssembly core engine and uses signal-based reactivity.
+ */
 export abstract class WasmComponent extends HTMLElement {
     protected shadow: ShadowRoot;
     protected static wasm: any;
-    private updatePending = false;
 
     constructor() {
         super();
@@ -34,79 +128,24 @@ export abstract class WasmComponent extends HTMLElement {
     }
 
     /**
-     * Creates a reactive proxy state. Any changes to the state object
-     * automatically schedules a batched visual re-render.
+     * Web Component lifecycle: called when the element is connected to the document's DOM.
+     * Starts the reactive rendering effect.
      */
-    protected createState<T extends object>(initialState: T): T {
-        return new Proxy(initialState, {
-            set: (target, prop, value) => {
-                if ((target as any)[prop] !== value) {
-                    (target as any)[prop] = value;
-                    this.scheduleUpdate();
-                }
-                return true;
-            },
-        });
-    }
-
-    /**
-     * Connects a global WasmStore. When any property in the store changes,
-     * the component automatically schedules a visual re-render.
-     */
-    protected connectStore(store: WasmStore<any>) {
-        store.subscribe(() => this.scheduleUpdate());
-    }
-
-    /**
-     * Schedules a re-render in the next animation frame to batch multiple state updates.
-     */
-    private scheduleUpdate() {
-        if (this.updatePending) return;
-        this.updatePending = true;
-        requestAnimationFrame(() => {
+    connectedCallback() {
+        effect(() => {
             this.render();
-            this.updatePending = false;
         });
     }
 
-    // Components extending this must implement rendering logic
-    abstract render(): void;
-}
-
-/**
- * A reactive state container that allows multiple Custom Web Components
- * to share and synchronize state.
- */
-export class WasmStore<T extends object> {
-    private stateProxy: T;
-    private subscribers: Set<() => void> = new Set();
-
-    constructor(initialState: T) {
-        this.stateProxy = new Proxy(initialState, {
-            set: (target, prop, value) => {
-                if ((target as any)[prop] !== value) {
-                    (target as any)[prop] = value;
-                    this.notify();
-                }
-                return true;
-            },
-        });
+    /**
+     * Renders the component template and binds events.
+     */
+    private render() {
+        DOMRenderer.render(this.shadow, this.template(), this);
     }
 
-    get state(): T {
-        return this.stateProxy;
-    }
-
-    subscribe(callback: () => void): () => void {
-        this.subscribers.add(callback);
-        return () => {
-            this.subscribers.delete(callback);
-        };
-    }
-
-    private notify() {
-        for (const cb of this.subscribers) {
-            cb();
-        }
-    }
+    /**
+     * Abstract template method returning the component's HTML markup string.
+     */
+    abstract template(): string;
 }
