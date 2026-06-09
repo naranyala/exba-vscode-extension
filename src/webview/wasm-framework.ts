@@ -50,6 +50,14 @@ export abstract class WasmComponent extends HTMLElement {
     }
 
     /**
+     * Connects a global WasmStore. When any property in the store changes,
+     * the component automatically schedules a visual re-render.
+     */
+    protected connectStore(store: WasmStore<any>) {
+        store.subscribe(() => this.scheduleUpdate());
+    }
+
+    /**
      * Schedules a re-render in the next animation frame to batch multiple state updates.
      */
     private scheduleUpdate() {
@@ -63,4 +71,40 @@ export abstract class WasmComponent extends HTMLElement {
 
     // Components extending this must implement rendering logic
     abstract render(): void;
+}
+
+/**
+ * A reactive state container that allows multiple Custom Web Components
+ * to share and synchronize state.
+ */
+export class WasmStore<T extends object> {
+    private stateProxy: T;
+    private subscribers: Set<() => void> = new Set();
+
+    constructor(initialState: T) {
+        this.stateProxy = new Proxy(initialState, {
+            set: (target, prop, value) => {
+                if ((target as any)[prop] !== value) {
+                    (target as any)[prop] = value;
+                    this.notify();
+                }
+                return true;
+            }
+        });
+    }
+
+    get state(): T {
+        return this.stateProxy;
+    }
+
+    subscribe(callback: () => void): () => void {
+        this.subscribers.add(callback);
+        return () => {
+            this.subscribers.delete(callback);
+        };
+    }
+
+    private notify() {
+        this.subscribers.forEach(cb => cb());
+    }
 }

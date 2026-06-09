@@ -34,11 +34,11 @@ pub extern "C" fn dealloc(ptr: *mut u8, size: usize) {
 }
 
 #[no_mangle]
-pub extern "C" fn calculate_metrics(users: u32, conversion_rate: f32, avg_spend: f32) {
+pub extern "C" fn calculate_metrics(users: u32, conversion_rate: f32, avg_spend: f32, growth_rate: f32) {
     // 1. Calculate main metrics
     let active_customers = (users as f32 * (conversion_rate / 100.0)) as u32;
     let monthly_revenue = active_customers as f32 * avg_spend;
-    let annual_projection = monthly_revenue * 12.0 * 1.18; // assuming 18% compound growth
+    let annual_projection = monthly_revenue * 12.0 * (1.0 + growth_rate / 100.0);
     let churned_customers = (active_customers as f32 * 0.04) as u32; // assuming 4% monthly churn rate
     
     // 2. Format a JSON response

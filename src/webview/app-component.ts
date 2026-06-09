@@ -1,26 +1,119 @@
-import { WasmComponent } from './wasm-framework';
+import { WasmComponent, WasmStore } from './wasm-framework';
 
 interface DashboardState {
     users: number;
     conversion: number;
     spend: number;
+    growth: number;
 }
 
-export class DashboardApp extends WasmComponent {
-    private state: DashboardState;
+// 1. Create a reactive global store shared by all components
+export const dashboardStore = new WasmStore<DashboardState>({
+    users: 25000,
+    conversion: 3.5,
+    spend: 55,
+    growth: 18
+});
 
+// 2. Define the SettingsPanel component
+export class SettingsPanel extends WasmComponent {
     constructor() {
         super();
-        // Setup initial reactive state
-        this.state = this.createState({
-            users: 25000,
-            conversion: 3.5,
-            spend: 55
-        });
+        this.connectStore(dashboardStore);
     }
 
     connectedCallback() {
-        // Render once initialized
+        this.render();
+    }
+
+    render() {
+        const state = dashboardStore.state;
+        this.shadow.innerHTML = `
+            <style>
+                :host {
+                    display: block;
+                    background: rgba(15, 23, 42, 0.3);
+                    border: 1px solid rgba(255, 255, 255, 0.04);
+                    border-radius: 16px;
+                    padding: 1.25rem;
+                }
+                .title {
+                    font-size: 0.8rem;
+                    font-weight: 800;
+                    color: #94a3b8;
+                    margin-bottom: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 0.08em;
+                }
+                .row {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.5rem;
+                }
+                .row-header {
+                    display: flex;
+                    justify-content: space-between;
+                    font-size: 0.85rem;
+                }
+                .label {
+                    color: #cbd5e1;
+                }
+                .value {
+                    color: #a78bfa;
+                    font-family: monospace;
+                    font-weight: 700;
+                }
+                input[type="range"] {
+                    -webkit-appearance: none;
+                    width: 100%;
+                    height: 4px;
+                    border-radius: 999px;
+                    background: #334155;
+                    outline: none;
+                }
+                input[type="range"]::-webkit-slider-thumb {
+                    -webkit-appearance: none;
+                    width: 14px;
+                    height: 14px;
+                    border-radius: 50%;
+                    background: #a78bfa;
+                    cursor: pointer;
+                }
+            </style>
+            <div>
+                <div class="title">Config Engine</div>
+                <div class="row">
+                    <div class="row-header">
+                        <span class="label">Target Growth</span>
+                        <span class="value">+${state.growth}%</span>
+                    </div>
+                    <input 
+                        type="range" 
+                        min="5" 
+                        max="50" 
+                        step="1"
+                        .value="${state.growth}" 
+                        id="growth-input"
+                    />
+                </div>
+            </div>
+        `;
+
+        this.shadow.getElementById('growth-input')?.addEventListener('input', (e) => {
+            state.growth = parseInt((e.target as HTMLInputElement).value);
+        });
+    }
+}
+customElements.define('settings-panel', SettingsPanel);
+
+// 3. Define the main DashboardApp component
+export class DashboardApp extends WasmComponent {
+    constructor() {
+        super();
+        this.connectStore(dashboardStore);
+    }
+
+    connectedCallback() {
         this.render();
     }
 
@@ -36,13 +129,15 @@ export class DashboardApp extends WasmComponent {
             return;
         }
 
-        // Call the Rust WebAssembly calculation engine
-        wasm.calculate_metrics(this.state.users, this.state.conversion, this.state.spend);
+        const state = dashboardStore.state;
+
+        // Call the Rust WebAssembly engine (passing the growth rate from the global store!)
+        wasm.calculate_metrics(state.users, state.conversion, state.spend, state.growth);
         
         // Retrieve and parse JSON from Rust's shared memory buffer
         const metrics = JSON.parse(this.getWasmString());
 
-        // Render shadow DOM structure with premium styling
+        // Render shadow DOM structure
         this.shadow.innerHTML = `
             <style>
                 :host {
@@ -99,7 +194,7 @@ export class DashboardApp extends WasmComponent {
                     padding: 2rem;
                     display: flex;
                     flex-direction: column;
-                    gap: 2rem;
+                    gap: 1.75rem;
                     box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
                 }
 
@@ -259,14 +354,14 @@ export class DashboardApp extends WasmComponent {
                         <div class="control-group">
                             <div class="control-header">
                                 <span class="label">Audience Size</span>
-                                <span class="value">${this.state.users.toLocaleString()}</span>
+                                <span class="value">${state.users.toLocaleString()}</span>
                             </div>
                             <input 
                                 type="range" 
                                 min="1000" 
                                 max="100000" 
                                 step="500" 
-                                .value="${this.state.users}" 
+                                .value="${state.users}" 
                                 id="users-input"
                             />
                         </div>
@@ -275,14 +370,14 @@ export class DashboardApp extends WasmComponent {
                         <div class="control-group">
                             <div class="control-header">
                                 <span class="label">Conversion Rate</span>
-                                <span class="value">${this.state.conversion.toFixed(1)}%</span>
+                                <span class="value">${state.conversion.toFixed(1)}%</span>
                             </div>
                             <input 
                                 type="range" 
                                 min="0.1" 
                                 max="20" 
                                 step="0.1" 
-                                .value="${this.state.conversion}" 
+                                .value="${state.conversion}" 
                                 id="conversion-input"
                             />
                         </div>
@@ -291,17 +386,22 @@ export class DashboardApp extends WasmComponent {
                         <div class="control-group">
                             <div class="control-header">
                                 <span class="label">Average Spend</span>
-                                <span class="value">$${this.state.spend}</span>
+                                <span class="value">$${state.spend}</span>
                             </div>
                             <input 
                                 type="range" 
                                 min="5" 
                                 max="500" 
                                 step="5" 
-                                .value="${this.state.spend}" 
+                                .value="${state.spend}" 
                                 id="spend-input"
                             />
                         </div>
+
+                        <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.08); margin: 0.5rem 0;" />
+
+                        <!-- Render SettingsPanel as nested Web Component -->
+                        <settings-panel></settings-panel>
                     </div>
 
                     <!-- Statistics Outputs Card -->
@@ -321,7 +421,7 @@ export class DashboardApp extends WasmComponent {
                         <div class="stat-card">
                             <span class="stat-title">Annualized Projection</span>
                             <span class="stat-value">$${metrics.annualProjection.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                            <span class="badge">Assuming +18% growth</span>
+                            <span class="badge">Assuming +${state.growth}% growth</span>
                         </div>
 
                         <div class="stat-card" style="border-color: rgba(239, 68, 68, 0.05)">
@@ -336,15 +436,15 @@ export class DashboardApp extends WasmComponent {
 
         // Bind event listeners to controls
         this.shadow.getElementById('users-input')?.addEventListener('input', (e) => {
-            this.state.users = parseInt((e.target as HTMLInputElement).value);
+            state.users = parseInt((e.target as HTMLInputElement).value);
         });
 
         this.shadow.getElementById('conversion-input')?.addEventListener('input', (e) => {
-            this.state.conversion = parseFloat((e.target as HTMLInputElement).value);
+            state.conversion = parseFloat((e.target as HTMLInputElement).value);
         });
 
         this.shadow.getElementById('spend-input')?.addEventListener('input', (e) => {
-            this.state.spend = parseInt((e.target as HTMLInputElement).value);
+            state.spend = parseInt((e.target as HTMLInputElement).value);
         });
     }
 }
