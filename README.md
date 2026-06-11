@@ -1,62 +1,62 @@
 # 🦀 Unified VS Code Extension: EXBA Starter
 
-A professional-grade VS Code extension starter leveraging **EXBA (Extended Browser API)**: Native Web Components, Signal-based reactivity, and a Rust-WASM core engine.
+A professional-grade VS Code and VSCodium extension starter leveraging **EXBA (Extended Browser API)**: Native Web Components, Signal-based reactivity, and a Rust-WASM core engine.
+
+---
 
 ## 🚀 Key Features
 
-- **EXBA Framework**: A reactive, lightweight framework built on native browser APIs for maximum performance and minimal memory footprint.
-- **Rust-WASM Core**: Offloads heavy computation (fuzzy search, financial modeling, data processing) to a high-performance Rust engine.
-- **Signal Reactivity**: Granular, dependency-tracking state management (similar to SolidJS) implemented in a tiny ~50 line runtime.
-- **SVG Charting**: Real-time, reactive SVG growth curves calculated entirely in Rust and rendered via native Web Components.
+- **EXBA Framework**: A reactive, lightweight frontend framework built on native browser APIs for maximum performance and minimal memory footprint.
+- **Rust-WASM Core**: Offloads heavy computation (fuzzy search, statistical modeling, data processing) to a high-performance Rust engine.
+- **Signal Reactivity**: Granular, dependency-tracking state management implemented in a tiny runtime.
+- **Visual Toggle Commands**:
+  - **Status Bar buttons**: A bottom status bar toggle displaying the workspace folder name to open the sidebar, and a dedicated `$(dashboard) EXBA Dashboard` button to toggle the dashboard.
+  - **Editor Title Bar button**: An icon button pinned to the top-right toolbar of all open files to toggle the dashboard.
+  - **Sidebar title bar button**: A toggle button pinned directly to the tree view's header.
 - **Full-Stack Testing**: 
   - **Rust**: Native unit tests for the core engine.
   - **Webview**: Vitest + Happy DOM for component and reactivity testing.
-  - **Extension**: VS Code integration testing.
 - **Modern Tooling**: Powered by **Bun**, **Rspack**, and **Rsbuild** for near-instant build times.
+- **Developer Hot-Loading**: Local symlinking command `bun run launch` that builds, links, and launches VSCodium automatically with hot-reload support.
 
-## 🧪 Testing
+---
 
-The project features a multi-layered testing strategy to ensure stability across the entire stack.
+## 🏗️ Codebase Architecture
 
-### 1. Rust Engine (Logic)
-Unit tests for the Rust-WASM core are written in native Rust and run in the standard environment.
-```bash
-bun run test:rust
+The project has been reorganized into a highly maintainable, modular structure:
+
+```
+.
+├── bin/                       # Build and helper scripts (build.js, link-extension.js, launch.js)
+├── rust/                      # Pure Rust-WASM Core Engine
+│   ├── src/lib.rs
+│   └── Cargo.toml
+├── webview/                   # Webview Browser Frontend
+│   ├── core/                  # EXBA Reactivity Framework & VS Code Messaging
+│   │   ├── exba.ts
+│   │   ├── vscode-service.ts
+│   │   └── utils.ts
+│   ├── components/            # Custom Web Component UI Views
+│   │   └── app-component.ts
+│   ├── tests/                 # Webview Frontend tests (Vitest + Happy DOM)
+│   │   ├── component.test.ts
+│   │   ├── exba.test.ts
+│   │   └── utils.test.ts
+│   ├── index.html             # HTML Shell
+│   └── index.css              # Custom styling
+└── src/                       # VS Code Extension Host Backend
+    ├── extension/             # Core extension activation and tree provider
+    │   ├── extension.ts
+    │   └── treeView.ts
+    ├── commands/              # Modular backend VS Code commands
+    │   ├── helloWorld.ts
+    │   └── workspaceFiles.ts
+    └── webviews/              # Webview panel host controllers
+        ├── catDemo.ts
+        └── dashboard.ts
 ```
 
-### 2. Webview (UI & Reactivity)
-The EXBA framework and web components are tested using **Vitest** and **Happy DOM**.
-```bash
-bun run test:webview
-```
-*Tests signals, memos, lifecycle hooks, and component rendering.*
-
-### 3. VS Code Extension (Integration)
-Integration tests that run inside a real VS Code instance.
-```bash
-bun run test:vscode
-```
-
-### 4. Run All Tests
-```bash
-bun run test
-```
-
-## 🏗️ Architecture
-
-### 1. Webview (The Display)
-Located in `src/webview`, the UI is built using the **EXBA** library.
-- **ExbaComponent**: The base class for all UI elements.
-- **Isolation**: Uses **Shadow DOM** to ensure extension styles never leak or conflict with VS Code.
-- **Reactivity**: Components are automatically kept in sync with **Signals**. When a signal updates, only the components using that signal re-render.
-
-### 2. Rust Engine (The Brain)
-Located in `src/rust`, this module is compiled to WebAssembly.
-- **Logic**: Handles fuzzy scoring for search, complex projections, and data serialization via **Serde**.
-- **Efficiency**: Communicates with JavaScript via shared memory buffers and JSON.
-
-### 3. Extension Host (The Glue)
-The standard VS Code extension layer that manages webview panels, tree views, and commands.
+---
 
 ## 🛠️ Getting Started
 
@@ -70,33 +70,47 @@ bun install
 rustup target add wasm32-unknown-unknown
 ```
 
-### Development
+### Development & Hot-Loading
+The easiest way to build, install, and run this extension locally:
 ```bash
-# Build everything (Rust + JS)
-bun run build
+bun run launch
+```
+This single command compiles the Rust WASM module, bundles the extension/webview components, links the extension to VSCodium / Cursor, and launches VSCodium in the workspace folder.
 
-# Run Tests
-bun run test         # Runs both Rust and Webview tests
-bun run test:rust    # Rust only
-bun run test:webview # Vitest only
+---
+
+## 🧪 Testing
+
+The project features a multi-layered testing strategy to ensure stability across the entire stack.
+
+### 1. Rust Engine (Logic)
+```bash
+bun run test:rust
 ```
 
-### Running Locally
-1. **Build the extension**: Ensure the `dist` folder is populated by running `bun run build`.
-2. **Open in VS Code**: Open this project folder in VS Code.
-3. **Launch**: Press `F5` (or go to the **Run and Debug** view and click **Run Extension**). This will open a new "Extension Development Host" window with the extension active.
-4. **Trigger Commands**: In the new window, open the Command Palette (`Ctrl+Shift+P`) and search for `Samples: WASM Web Component Dashboard`.
+### 2. Webview (UI & Reactivity)
+```bash
+bun run test:webview
+```
 
-### Packaging for Manual Install
-If you want to install the extension permanently in your local VS Code:
-1. **Package**: Run `npx @vscode/vsce package` to generate a `.vsix` file.
-2. **Install**: Open the Extensions view in VS Code, click the `...` (Views and More Actions), and select **Install from VSIX...**.
+### 3. Run All Tests
+```bash
+bun run test
+```
+
+---
 
 ## 📜 Scripts Reference
 
-- `build`: Full production build.
-- `lint`/`format`: Code quality via Biome.
-- `test`: Comprehensive testing suite.
+- `build`: Full production build (Rust WASM compilation + Rspack Extension bundling + Rsbuild Webview bundling).
+- `launch`: Rebuild, link to local editors, and launch/reload VSCodium.
+- `link:local`: Generates symlinks in your Cursor and VS Code OSS extension directories.
+- `lint`/`format`/`check`: Code quality check and auto-formatting via Biome.
+- `test`: Comprehensive testing suite (Rust + Vitest).
+- `test:rust`: Runs native Rust cargo tests.
+- `test:webview`: Runs Vitest tests for the webview components.
+
+---
 
 ## 📄 License
 MIT

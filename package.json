@@ -8,9 +8,7 @@
         "vscode": "^1.100.0"
     },
     "main": "./dist/extension.js",
-    "activationEvents": [
-        "onStartupFinished"
-    ],
+    "activationEvents": ["onStartupFinished"],
     "contributes": {
         "viewsContainers": {
             "activitybar": [
