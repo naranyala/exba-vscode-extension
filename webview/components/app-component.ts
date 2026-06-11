@@ -21,77 +21,15 @@ const [getWasmReady, setWasmReady] = signal(false);
 // 1c. Grid menu signals (isolated for sidepanel)
 const [getGridSearch, setGridSearch] = signal("");
 
-// 2. Define Memos (Derived State)
-const getMetrics = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    if (!wasm) return null;
-    return callWasm(
-        wasm,
-        "calculate_metrics",
-        getUsers(),
-        getConversion(),
-        getSpend(),
-        getGrowth(),
-    );
-});
-
-const getChartData = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    const metrics = getMetrics();
-    if (!wasm || !metrics) return [];
-    return callWasm(wasm, "generate_chart_data", metrics.monthlyRevenue, getGrowth()) as {
-        x: number;
-        y: number;
-    }[];
-});
-
-const getFilteredExtensions = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    const search = getSearch().toLowerCase().trim();
-    if (!wasm) return [];
-
-    return EXTENSIONS.map((ext) => {
-        if (!search) return { ...ext, score: 100 };
-
-        const [qPtr, qLen] = passStringToWasm(wasm, search);
-        const targetText = `${ext.name} ${ext.description} ${ext.category} ${ext.tags.join(" ")}`;
-        const [tPtr, tLen] = passStringToWasm(wasm, targetText);
-
-        const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
-        wasm.dealloc(qPtr, qLen);
-        wasm.dealloc(tPtr, tLen);
-
-        return { ...ext, score };
-    })
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score);
-});
-
-const getFilteredGridItems = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    const search = getGridSearch().toLowerCase().trim();
-    if (!wasm) return [];
-
-    return GRID_ITEMS.map((item) => {
-        if (!search) return { ...item, score: 100 };
-
-        const [qPtr, qLen] = passStringToWasm(wasm, search);
-        const targetText = `${item.name} ${item.description} ${item.category} ${item.tags.join(" ")}`;
-        const [tPtr, tLen] = passStringToWasm(wasm, targetText);
-
-        const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
-        wasm.dealloc(qPtr, qLen);
-        wasm.dealloc(tPtr, tLen);
-
-        return { ...item, score };
-    })
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score);
-});
+interface TabItem {
+    name: string;
+    icon: string;
+    category: string;
+    description: string;
+    tags: string[];
+}
+const [getOpenTabs, setOpenTabs] = signal<TabItem[]>([]);
+const [getActiveTabName, setActiveTabName] = signal<string>("home");
 
 interface ExtensionItem {
     name: string;
@@ -238,6 +176,78 @@ const GRID_ITEMS: GridItem[] = [
         action: "extensionAction",
     },
 ];
+
+// 2. Define Memos (Derived State)
+const getMetrics = memo(() => {
+    getWasmReady();
+    const wasm = (ExbaComponent as any).wasm;
+    if (!wasm) return null;
+    return callWasm(
+        wasm,
+        "calculate_metrics",
+        getUsers(),
+        getConversion(),
+        getSpend(),
+        getGrowth(),
+    );
+});
+
+const getChartData = memo(() => {
+    getWasmReady();
+    const wasm = (ExbaComponent as any).wasm;
+    const metrics = getMetrics();
+    if (!wasm || !metrics) return [];
+    return callWasm(wasm, "generate_chart_data", metrics.monthlyRevenue, getGrowth()) as {
+        x: number;
+        y: number;
+    }[];
+});
+
+const getFilteredExtensions = memo(() => {
+    getWasmReady();
+    const wasm = (ExbaComponent as any).wasm;
+    const search = getSearch().toLowerCase().trim();
+    if (!wasm) return [];
+
+    return EXTENSIONS.map((ext) => {
+        if (!search) return { ...ext, score: 100 };
+
+        const [qPtr, qLen] = passStringToWasm(wasm, search);
+        const targetText = `${ext.name} ${ext.description} ${ext.category} ${ext.tags.join(" ")}`;
+        const [tPtr, tLen] = passStringToWasm(wasm, targetText);
+
+        const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
+        wasm.dealloc(qPtr, qLen);
+        wasm.dealloc(tPtr, tLen);
+
+        return { ...ext, score };
+    })
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+});
+
+const getFilteredGridItems = memo(() => {
+    getWasmReady();
+    const wasm = (ExbaComponent as any).wasm;
+    const search = getGridSearch().toLowerCase().trim();
+    if (!wasm) return [];
+
+    return GRID_ITEMS.map((item) => {
+        if (!search) return { ...item, score: 100 };
+
+        const [qPtr, qLen] = passStringToWasm(wasm, search);
+        const targetText = `${item.name} ${item.description} ${item.category} ${item.tags.join(" ")}`;
+        const [tPtr, tLen] = passStringToWasm(wasm, targetText);
+
+        const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
+        wasm.dealloc(qPtr, qLen);
+        wasm.dealloc(tPtr, tLen);
+
+        return { ...item, score };
+    })
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+});
 
 // 3. Define the SettingsPanel component
 export class SettingsPanel extends ExbaComponent {
@@ -1060,7 +1070,7 @@ export class GridMenuApp extends ExbaComponent {
 
             .grid {
                 display: grid;
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(2, 1fr);
                 gap: 0.5rem;
             }
 
@@ -1220,16 +1230,221 @@ export class GridMenuApp extends ExbaComponent {
                 from { opacity: 0; transform: translateY(6px); }
                 to { opacity: 1; transform: translateY(0); }
             }
+
+            .navbar {
+                display: flex;
+                align-items: center;
+                gap: 0.35rem;
+                background: rgba(15, 23, 42, 0.4);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                padding: 0.3rem;
+                margin-bottom: 0.85rem;
+                overflow-x: auto;
+                scrollbar-width: none;
+            }
+            .navbar::-webkit-scrollbar {
+                display: none;
+            }
+            .nav-item {
+                display: flex;
+                align-items: center;
+                gap: 0.35rem;
+                padding: 0.35rem 0.65rem;
+                background: transparent;
+                border: 1px solid transparent;
+                border-radius: 6px;
+                color: #94a3b8;
+                font-size: 0.75rem;
+                font-weight: 600;
+                cursor: pointer;
+                white-space: nowrap;
+                transition: all 0.2s ease;
+            }
+            .nav-item:hover {
+                color: #e2e8f0;
+                background: rgba(255, 255, 255, 0.02);
+            }
+            .nav-item.active {
+                background: rgba(99, 102, 241, 0.15);
+                border-color: rgba(99, 102, 241, 0.2);
+                color: #a78bfa;
+            }
+            .nav-close {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                width: 13px;
+                height: 13px;
+                border-radius: 50%;
+                font-size: 8px;
+                color: #64748b;
+                transition: all 0.2s ease;
+                margin-left: 0.25rem;
+            }
+            .nav-close:hover {
+                background: rgba(239, 68, 68, 0.2);
+                color: #ef4444;
+            }
+            .tab-view {
+                background: rgba(30, 41, 59, 0.2);
+                border: 1px solid rgba(255, 255, 255, 0.04);
+                border-radius: 14px;
+                padding: 1rem;
+                animation: fadeIn 0.25s ease-out;
+            }
+            .tab-header {
+                display: flex;
+                align-items: center;
+                gap: 0.6rem;
+                margin-bottom: 0.6rem;
+            }
+            .tab-icon-large {
+                font-size: 1.8rem;
+                background: rgba(255, 255, 255, 0.03);
+                width: 42px;
+                height: 42px;
+                border-radius: 10px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            }
+            .tab-meta {
+                display: flex;
+                flex-direction: column;
+            }
+            .tab-category {
+                font-size: 0.55rem;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: #a78bfa;
+                font-weight: 800;
+            }
+            .tab-title {
+                font-size: 1rem;
+                font-weight: 800;
+                margin: 0;
+                color: #ffffff;
+            }
+            .tab-desc {
+                font-size: 0.75rem;
+                color: #cbd5e1;
+                line-height: 1.4;
+                margin: 0.4rem 0 0.6rem 0;
+            }
+            .tab-tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.25rem;
+                margin-bottom: 1rem;
+            }
+            .interactive-panel {
+                background: rgba(15, 23, 42, 0.25);
+                border: 1px solid rgba(255, 255, 255, 0.03);
+                border-radius: 10px;
+                padding: 0.85rem;
+            }
+            .interactive-panel h4 {
+                margin: 0 0 0.2rem 0;
+                font-size: 0.75rem;
+                font-weight: 700;
+                color: #e2e8f0;
+            }
+            .interactive-panel p {
+                margin: 0 0 0.6rem 0;
+                font-size: 0.65rem;
+                color: #64748b;
+            }
+            .sandbox-demo {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 0.4rem;
+                padding: 0.5rem 0;
+                text-align: center;
+            }
+            .demo-animation {
+                font-size: 1.5rem;
+                animation: pulse 2s infinite ease-in-out;
+            }
+            .action-btn {
+                background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+                border: none;
+                color: #ffffff;
+                padding: 0.35rem 0.85rem;
+                border-radius: 6px;
+                font-size: 0.65rem;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                box-shadow: 0 2px 6px rgba(99, 102, 241, 0.15);
+            }
+            .action-btn:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);
+            }
+            @keyframes pulse {
+                0%, 100% { transform: scale(1); opacity: 0.8; }
+                50% { transform: scale(1.12); opacity: 1; }
+            }
         `;
     }
 
-    handleGridSearch = debounce((e: Event) => {
+    handleGridSearch(e: Event) {
         setGridSearch((e.target as HTMLInputElement).value);
-    }, 150);
+    }
 
     handleGridClick(e: Event) {
         const card = e.currentTarget as HTMLElement;
         const name = card.getAttribute("data-name");
+        if (name) {
+            vscode.postMessage("extensionAction", { name });
+            const item = GRID_ITEMS.find((x) => x.name === name);
+            if (item) {
+                const openTabs = getOpenTabs();
+                if (!openTabs.some((x) => x.name === name)) {
+                    setOpenTabs([...openTabs, item]);
+                }
+                setActiveTabName(name);
+            }
+        }
+    }
+
+    handleTabClick(e: Event) {
+        const target = e.currentTarget as HTMLElement;
+        const name = target.getAttribute("data-name");
+        if (name) {
+            setActiveTabName(name);
+        }
+    }
+
+    handleCloseTab(e: Event) {
+        e.stopPropagation();
+        const target = e.currentTarget as HTMLElement;
+        const name = target.getAttribute("data-name");
+        if (name) {
+            const openTabs = getOpenTabs();
+            const filtered = openTabs.filter((x) => x.name !== name);
+            setOpenTabs(filtered);
+
+            if (getActiveTabName() === name) {
+                if (filtered.length > 0) {
+                    setActiveTabName(filtered[filtered.length - 1].name);
+                } else {
+                    setActiveTabName("home");
+                }
+            }
+        }
+    }
+
+    handleHomeClick() {
+        setActiveTabName("home");
+    }
+
+    handleTriggerAction(e: Event) {
+        const target = e.currentTarget as HTMLElement;
+        const name = target.getAttribute("data-name");
         if (name) {
             vscode.postMessage("extensionAction", { name });
         }
@@ -1253,63 +1468,154 @@ export class GridMenuApp extends ExbaComponent {
         const search = getGridSearch();
         const items = getFilteredGridItems();
         const query = search.toLowerCase().trim();
+        const activeTab = getActiveTabName();
+        const openTabs = getOpenTabs();
+
+        // Find current active item if not in home view
+        const activeItem = openTabs.find((x) => x.name === activeTab);
 
         return html`
-            <div class="header">
-                <h2>EXBA Grid Menu</h2>
-                <p>Fuzzy search powered by Rust-WASM</p>
-            </div>
-
-            <input 
-                type="text" 
-                class="search-box" 
-                placeholder="Search features..." 
-                value="${search}" 
-                id="grid-search"
-                on-input="handleGridSearch"
-                autofocus
-            />
-
-            <div class="results-count">
-                ${query ? `${items.length} result${items.length !== 1 ? "s" : ""} for "${search}"` : `${items.length} features`}
+            <div class="navbar">
+                <button class="nav-item ${activeTab === "home" ? "active" : ""}" on-click="handleHomeClick">
+                    <span>🏠</span>
+                    <span>Home</span>
+                </button>
+                ${openTabs
+                    .map(
+                        (tab) => html`
+                    <button 
+                        class="nav-item ${activeTab === tab.name ? "active" : ""}" 
+                        on-click="handleTabClick" 
+                        data-name="${tab.name}"
+                    >
+                        <span>${tab.icon}</span>
+                        <span>${tab.name}</span>
+                        <span class="nav-close" on-click="handleCloseTab" data-name="${tab.name}">✕</span>
+                    </button>
+                `,
+                    )
+                    .join("")}
             </div>
 
             ${
-                items.length > 0
+                activeTab === "home"
                     ? html`
-                <div class="grid">
-                    ${items
-                        .map(
-                            (item) => html`
-                        <div class="card" on-click="handleGridClick" data-name="${item.name}">
-                            <div class="icon">${item.icon}</div>
-                            <div class="content">
-                                <div class="content-top">
-                                    <span class="category">${item.category}</span>
-                                    ${query ? html`<span class="score">${item.score}%</span>` : ""}
-                                </div>
-                                <span class="title">${item.name}</span>
-                                <span class="desc">${item.description}</span>
-                                <div class="tags">
-                                    ${item.tags.map((tag) => html`<span class="tag">#${tag}</span>`).join("")}
+                <div class="header">
+                    <h2>EXBA Grid Menu</h2>
+                    <p>Fuzzy search powered by Rust-WASM</p>
+                </div>
+
+                <input 
+                    type="text" 
+                    class="search-box" 
+                    placeholder="Search features..." 
+                    value="${search}" 
+                    id="grid-search"
+                    on-input="handleGridSearch"
+                    autofocus
+                />
+
+                <div class="results-count">
+                    ${query ? `${items.length} result${items.length !== 1 ? "s" : ""} for "${search}"` : `${items.length} features`}
+                </div>
+
+                ${
+                    items.length > 0
+                        ? html`
+                    <div class="grid">
+                        ${items
+                            .map(
+                                (item) => html`
+                            <div class="card" on-click="handleGridClick" data-name="${item.name}">
+                                <div class="icon">${item.icon}</div>
+                                <div class="content">
+                                    <div class="content-top">
+                                        <span class="category">${item.category}</span>
+                                        ${query ? html`<span class="score">${item.score}%</span>` : ""}
+                                    </div>
+                                    <span class="title">${item.name}</span>
+                                    <span class="desc">${item.description}</span>
+                                    <div class="tags">
+                                        ${item.tags.map((tag) => html`<span class="tag">#${tag}</span>`).join("")}
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    `,
-                        )
-                        .join("")}
-                </div>
-            `
-                    : html`
-                <div class="no-results">
-                    <p>No matches for "${search}"</p>
-                </div>
-            `
-            }
+                        `,
+                            )
+                            .join("")}
+                    </div>
+                `
+                        : html`
+                    <div class="no-results">
+                        <p>No matches for "${search}"</p>
+                    </div>
+                `
+                }
 
-            <div class="fullscreen-bar">
-                <button class="fullscreen-btn" on-click="handleFullscreen">Open Fullscreen</button>
-            </div>
+                <div class="fullscreen-bar">
+                    <button class="fullscreen-btn" on-click="handleFullscreen">Open Fullscreen</button>
+                </div>
+            `
+                    : activeItem
+                      ? html`
+                <div class="tab-view">
+                    <div class="tab-header">
+                        <span class="tab-icon-large">${activeItem.icon}</span>
+                        <div class="tab-meta">
+                            <span class="tab-category">${activeItem.category}</span>
+                            <h3 class="tab-title">${activeItem.name}</h3>
+                        </div>
+                    </div>
+                    <p class="tab-desc">${activeItem.description}</p>
+                    
+                    <div class="tab-tags">
+                        ${activeItem.tags.map((tag) => html`<span class="tag">#${tag}</span>`).join("")}
+                    </div>
+
+                    <div class="interactive-panel">
+                        <h4>Feature Sandbox</h4>
+                        <p>Interact with the live compiled sub-module below:</p>
+                        
+                        ${
+                            activeItem.name === "WASM Engine" || activeItem.name === "Revenue Metrics"
+                                ? html`
+                                    <div style="display: flex; flex-direction: column; gap: 1rem;">
+                                        <settings-panel></settings-panel>
+                                        <wasm-chart></wasm-chart>
+                                    </div>
+                                `
+                                : activeItem.name === "Fuzzy Search"
+                                  ? html`
+                                    <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                                        <input 
+                                            type="text" 
+                                            class="search-box" 
+                                            placeholder="Type test target text here..." 
+                                            id="fuzzy-sim-target"
+                                            value="Rust-WASM fuzzy search simulator engine"
+                                            style="margin-bottom: 0;"
+                                        />
+                                        <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+                                            <span style="font-size: 0.7rem; color: #64748b;">Matching against 'wasm'...</span>
+                                            <span style="font-family: monospace; font-size: 0.8rem; font-weight: 800; color: #4ade80;">Score: 100%</span>
+                                        </div>
+                                    </div>
+                                `
+                                  : html`
+                                    <div class="sandbox-demo">
+                                        <div class="demo-animation">⚡</div>
+                                        <p style="font-size: 0.7rem; color: #64748b; margin: 0.5rem 0;">This feature subpanel communicates directly with VS Code workspace APIs.</p>
+                                        <button class="action-btn" on-click="handleTriggerAction" data-name="${activeItem.name}">
+                                            Send Message to Host
+                                        </button>
+                                    </div>
+                                `
+                        }
+                    </div>
+                </div>
+            `
+                      : ""
+            }
         `;
     }
 }

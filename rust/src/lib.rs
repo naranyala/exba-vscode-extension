@@ -128,22 +128,40 @@ pub extern "C" fn score_search(query_ptr: *const u8, query_len: usize, target_pt
         return 100;
     }
 
-    if target.contains(&query) {
-        return 100 - (target.len() as i32 - query.len() as i32);
+    // Exact substring matching
+    if let Some(idx) = target.find(&query) {
+        let length_penalty = (target.len() as i32 - query.len() as i32) / 2;
+        let score = 100 - (idx as i32) * 2 - length_penalty;
+        return if score < 1 { 1 } else { score };
     }
 
-    // Simple fuzzy match: count how many characters of query appear in target in order
-    let mut score = 0;
-    let mut target_chars = target.chars();
+    // Fuzzy match with gap penalties
+    let mut score = 80;
+    let mut last_idx = None;
+
     for q_char in query.chars() {
-        if let Some(_) = target_chars.find(|&t_char| t_char == q_char) {
-            score += 10;
+        let search_start = last_idx.map(|idx| idx + 1).unwrap_or(0);
+        if search_start >= target.len() {
+            return 0;
+        }
+
+        if let Some(found_offset) = target[search_start..].find(q_char) {
+            let actual_idx = search_start + found_offset;
+
+            if let Some(prev) = last_idx {
+                let gap = actual_idx - prev - 1;
+                score -= (gap as i32) * 8; // Subtract 8 points per gap char
+            } else {
+                score -= (actual_idx as i32) * 3; // Subtract 3 points for starting position offset
+            }
+
+            last_idx = Some(actual_idx);
         } else {
-            score -= 5;
+            return 0; // If any query character is not found, no match
         }
     }
 
-    score
+    if score < 0 { 0 } else { score }
 }
 
 #[cfg(test)]
@@ -167,7 +185,7 @@ mod tests {
         assert_eq!(exact, 100);
 
         let no_match = score_search("xyz".as_ptr(), 3, "abc".as_ptr(), 3);
-        assert!(no_match < 0);
+        assert_eq!(no_match, 0);
     }
 
     #[test]
