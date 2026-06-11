@@ -1,6 +1,5 @@
 import { ExbaComponent, defineComponent, html } from "../core/exba";
 import { css as gooberCss } from "goober";
-import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
 const styles = {
@@ -16,7 +15,6 @@ const styles = {
 export class LeafletDemo extends ExbaComponent {
     private gCss: any;
     private classes!: { container: string };
-    private mapEl: HTMLElement | null = null;
     private mapInitialized = false;
 
     constructor() {
@@ -34,9 +32,11 @@ export class LeafletDemo extends ExbaComponent {
     }
 
     private initMap() {
-        if (this.mapInitialized || !this.mapEl) return;
+        if (this.mapInitialized) return;
+        const el = this.shadow.querySelector(`.${this.classes.container}`);
+        if (!el) return;
         // Use imported Leaflet instance
-        const map = L.map(this.mapEl).setView([51.505, -0.09], 13);
+        const map = L.map(el).setView([51.505, -0.09], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; OpenStreetMap contributors',
         }).addTo(map);
@@ -44,7 +44,10 @@ export class LeafletDemo extends ExbaComponent {
     }
 
     template() {
-        return html`<div class="${this.classes.leafletContainer}" ref=${(el: any) => (this.mapEl = el)}></div>`;
+        return html`
+            <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+            <div class="${this.classes.container}"></div>
+        `;
     }
 
     styles() {

@@ -152,9 +152,13 @@
         "iconoir": "^7.11.0",
         "leaflet": "^1.9.4",
         "lucide-static": "^1.17.0",
+        "vega": "^6.2.0",
+        "vega-embed": "^7.1.0",
+        "vega-lite": "^6.4.3",
         "vis-network": "^10.1.0",
         "vscode-languageclient": "^9.0.1",
-        "vscode-languageserver": "^9.0.1"
+        "vscode-languageserver": "^9.0.1",
+        "wavesurfer.js": "^7.12.7"
     },
     "devDependencies": {
         "@biomejs/biome": "^1.9.4",

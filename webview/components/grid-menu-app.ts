@@ -350,7 +350,7 @@ export class GridMenuApp extends ExbaComponent {
     private _sectionsExpanded = signal<Record<string, boolean>>({
         components: false,
         apis: false,
-        integration: true,
+        vscodeApi: true,
     });
 
     private gCss: any;
@@ -390,10 +390,10 @@ export class GridMenuApp extends ExbaComponent {
     constructor() {
         super();
         this.gCss = gooberCss.bind({ target: this.shadow });
+        this.initStyles();
     }
 
     connectedCallback() {
-        this.initStyles();
         super.connectedCallback();
     }
 
@@ -504,9 +504,9 @@ export class GridMenuApp extends ExbaComponent {
         set({ ...get(), components: !get().components });
     }
 
-    handleToggleIntegration() {
+    handleToggleVscodeApi() {
         const [get, set] = this._sectionsExpanded;
-        set({ ...get(), integration: !get().integration });
+        set({ ...get(), vscodeApi: !get().vscodeApi });
     }
 
     handleToggleApis() {
@@ -534,6 +534,7 @@ export class GridMenuApp extends ExbaComponent {
     }
 
     template() {
+        if (!this.classes) return html`<div>Loading...</div>`;
         const wasm = (ExbaComponent as any).wasm;
         if (!wasm) {
             return html`
@@ -545,7 +546,7 @@ export class GridMenuApp extends ExbaComponent {
         }
 
         const search = getGridSearch();
-        const items = getFilteredGridItems();
+        const items = getFilteredGridItems() || [];
         const query = search.toLowerCase().trim();
         const activeTab = getActiveTabName();
         const openTabs = getOpenTabs();
@@ -556,7 +557,7 @@ export class GridMenuApp extends ExbaComponent {
 
         const componentItems = items.filter((x) => x.category === "Component Examples");
         const apiItems = items.filter((x) => x.category === "Browser API");
-        const integrationItems = items.filter((x) => x.category === "Component Integration");
+        const vscodeApiItems = items.filter((x) => x.category === "vscode api exploration");
 
         return html`
             <div class="${this.classes.navbar}">
@@ -603,22 +604,22 @@ export class GridMenuApp extends ExbaComponent {
                     ${query ? `${items.length} result${items.length !== 1 ? "s" : ""} for "${search}"` : `${items.length} components`}
                 </div>
 
-                <!-- Component Integration Collapsible Lane (moved to top) -->
-                <button class="${this.classes.sectionHeader}" on-click="handleToggleIntegration">
-                    <h3>Component Integration</h3>
-                    <span class="chevron${!sectionsExpanded.integration ? " collapsed" : ""}">▼</span>
+                <!-- VS Code API Exploration Collapsible Lane -->
+                <button class="${this.classes.sectionHeader}" on-click="handleToggleVscodeApi">
+                    <h3>VS Code API Exploration</h3>
+                    <span class="chevron${!sectionsExpanded.vscodeApi ? " collapsed" : ""}">▼</span>
                 </button>
                 ${
-                    sectionsExpanded.integration
-                        ? integrationItems.length > 0
+                    sectionsExpanded.vscodeApi
+                        ? vscodeApiItems.length > 0
                             ? html`
                         <div class="${this.classes.grid}">
-                            ${integrationItems.map((item) => this.renderCard(item, query)).join("")}
+                            ${vscodeApiItems.map((item) => this.renderCard(item, query)).join("")}
                         </div>
                     `
                             : html`
                         <div class="${this.classes.noResults}">
-                            <p>No integration demos match "${search}"</p>
+                            <p>No API exploration demos match "${search}"</p>
                         </div>
                     `
                         : ""
@@ -704,11 +705,13 @@ export class GridMenuApp extends ExbaComponent {
                                             : activeItem.name === "Web Share API"
                                               ? html`<exba-share-demo></exba-share-demo>`
                                               : activeItem.name === "Leaflet Demo"
-                                                ? html`<exba-leaflet-demo></exba-leaflet-demo>`
-                                                : activeItem.name === "Vis Network Demo"
-                                                  ? html`<exba-vis-network-demo></exba-vis-network-demo>`
+                                              ? html`<exba-leaflet-demo></exba-leaflet-demo>`
+                                              : activeItem.name === "Vis Network Demo"
+                                                ? html`<exba-vis-network-demo></exba-vis-network-demo>`
+                                                : activeItem.name === "Audio Player"
+                                                  ? html`<audio-player></audio-player>`
                                                   : ""
-                        }
+                                              }
                     </div>
                 </div>
               `

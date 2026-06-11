@@ -153,11 +153,19 @@ export const GRID_ITEMS: GridItem[] = [
         tags: ["share", "webshare", "native", "browser"],
         action: "extensionAction",
     },
-    // Component Integration demos
+    // VS Code API Exploration demos
+    {
+        name: "VS Code API Exploration",
+        description: "Exploring VS Code Extension API capabilities.",
+        category: "vscode api exploration",
+        icon: "🔌",
+        tags: ["vscode", "api", "extension"],
+        action: "extensionAction",
+    },
     {
         name: "Leaflet Demo",
         description: "Interactive map using Leaflet.js library.",
-        category: "Component Integration",
+        category: "vscode api exploration",
         icon: "🗺️",
         tags: ["leaflet", "map", "interactive"],
         action: "extensionAction",
@@ -165,9 +173,17 @@ export const GRID_ITEMS: GridItem[] = [
     {
         name: "Vis Network Demo",
         description: "Mind‑map style network visualization with vis‑network.",
-        category: "Component Integration",
+        category: "vscode api exploration",
         icon: "🧠",
         tags: ["vis", "network", "mindmap"],
+        action: "extensionAction",
+    },
+    {
+        name: "Audio Player",
+        description: "Audio player with waveform visualization.",
+        category: "vscode api exploration",
+        icon: "🎵",
+        tags: ["audio", "waveform", "player"],
         action: "extensionAction",
     },
 ];

@@ -1,6 +1,5 @@
 import { ExbaComponent, defineComponent, html } from "../core/exba";
 import { css as gooberCss } from "goober";
-import 'vis-network/styles/vis-network.min.css';
 import { DataSet, Network } from 'vis-network/standalone';
 
 const styles = {
@@ -16,7 +15,6 @@ const styles = {
 export class VisNetworkDemo extends ExbaComponent {
     private gCss: any;
     private classes!: { container: string };
-    private networkEl: HTMLElement | null = null;
     private networkInitialized = false;
 
     constructor() {
@@ -34,8 +32,9 @@ export class VisNetworkDemo extends ExbaComponent {
     }
 
     private initNetwork() {
-        if (this.networkInitialized || !this.networkEl) return;
-        if (this.networkInitialized || !this.networkEl) return;
+        if (this.networkInitialized) return;
+        const el = this.shadow.querySelector(`.${this.classes.container}`);
+        if (!el) return;
         const nodes = new DataSet([
             { id: 1, label: "Node 1" },
             { id: 2, label: "Node 2" },
@@ -51,12 +50,15 @@ export class VisNetworkDemo extends ExbaComponent {
         ]);
         const data = { nodes, edges };
         const options = {};
-        new Network(this.networkEl, data, options);
+        new Network(el, data, options);
         this.networkInitialized = true;
     }
 
     template() {
-        return html`<div class="${this.classes.visContainer}" ref=${(el: any) => (this.networkEl = el)}></div>`;
+        return html`
+            <link rel="stylesheet" href="https://unpkg.com/vis-network@9.1.6/dist/vis-network.min.css">
+            <div class="${this.classes.container}"></div>
+        `;
     }
 
     styles() {

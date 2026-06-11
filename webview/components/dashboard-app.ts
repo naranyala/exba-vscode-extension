@@ -2,6 +2,8 @@ import { ExbaComponent, defineComponent, html } from "../core/exba";
 import { debounce, formatCurrency, formatNumber } from "../core/utils";
 import { vscode } from "../core/vscode-service";
 import { css as gooberCss } from "goober";
+import "./vega-chart";
+import "./audio-player";
 import {
     getConversion,
     getFilteredExtensions,
@@ -446,29 +448,51 @@ export class DashboardApp extends ExbaComponent {
             vscode.postMessage("extensionAction", { name });
         }
     }
-
-    template() {
-        const metrics = getMetrics();
-        if (!metrics) {
-            return html`
-                <div class="${this.classes.loading}">
-                    <div class="${this.classes.spinner}"></div>
-                    <p>Initializing WASM calculation engine...</p>
-                </div>
-            `;
-        }
-
-        const users = getUsers();
-        const conversion = getConversion();
-        const spend = getSpend();
-        const growth = getGrowth();
-        const tab = getTab();
-        const search = getSearch();
-        const filteredExtensions = getFilteredExtensions();
-        const query = search.toLowerCase().trim();
-
+template() {
+    const metrics = getMetrics();
+    if (!metrics) {
         return html`
-            <div class="${this.classes.container}">
+            <div class="${this.classes.loading}">
+                <div class="${this.classes.spinner}"></div>
+                <p>Initializing WASM calculation engine...</p>
+            </div>
+        `;
+    }
+
+    const users = getUsers();
+    const conversion = getConversion();
+    const spend = getSpend();
+    const growth = getGrowth();
+    const tab = getTab();
+    const search = getSearch();
+    const filteredExtensions = getFilteredExtensions();
+    const query = search.toLowerCase().trim();
+
+    // Demo Vega spec - Render after template returns
+    const demoSpec = {
+        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+        "description": "A simple bar chart with embedded data.",
+        "data": {
+            "values": [
+                {"a": "A", "b": 28}, {"a": "B", "b": 55}, {"a": "C", "b": 43},
+                {"a": "D", "b": 91}, {"a": "E", "b": 81}, {"a": "F", "b": 53},
+                {"a": "G", "b": 19}, {"a": "H", "b": 87}, {"a": "I", "b": 52}
+            ]
+        },
+        "mark": "bar",
+        "encoding": {
+            "x": {"field": "a", "type": "nominal", "axis": {"labelAngle": 0}},
+            "y": {"field": "b", "type": "quantitative"}
+        }
+    };
+
+    setTimeout(() => {
+        const chart = this.shadow.querySelector("#demo-vega-chart") as any;
+        if (chart) chart.spec = demoSpec;
+    }, 0);
+
+    return html`
+        <div class="${this.classes.container}">
                 <header class="${this.classes.header}">
                     <h1>WASM Dashboard Engine</h1>
                     <p>Reactive browser components calculated via native WebAssembly in Rust</p>
@@ -568,6 +592,8 @@ export class DashboardApp extends ExbaComponent {
 
                         <div style="grid-column: 1 / -1;">
                             <wasm-chart></wasm-chart>
+                            <vega-chart id="demo-vega-chart"></vega-chart>
+                            <audio-player src="https://wavesurfer-js.org/example/media/demo.wav"></audio-player>
                         </div>
                     </div>
                 `
