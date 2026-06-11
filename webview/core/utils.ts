@@ -62,4 +62,3 @@ export function passStringToWasm(wasm: any, str: string): [number, number] {
 
     return [ptr, len];
 }
-

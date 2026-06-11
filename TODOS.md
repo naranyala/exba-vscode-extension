@@ -1,45 +1,27 @@
 # 📝 Development Roadmap & TODOs
 
-This document outlines future enhancement opportunities, refactoring tasks, and feature roadmap items for the VS Code Extension Starter.
+## ✅ Completed Features
+- [x] **EXBA (Extended Browser API)**: Signal-based reactivity engine and `ExbaComponent` base class.
+- [x] **Rust-WASM Integration**: Core engine for metrics and fuzzy search scoring.
+- [x] **Reactive SVG Charts**: Real-time growth curves calculated in Rust and rendered via SVG Web Components.
+- [x] **Multi-Layer Testing Suite**: Unit tests for Rust and Vitest for the EXBA logic.
+- [x] **High-Performance Bundling**: Rspack and Rsbuild integration for ultra-fast dev cycles.
 
----
+## 🛠️ Upcoming Webview Enhancements
+- [ ] **EXBA DOM Reconciliation**: Upgrade `innerHTML` rendering to a more efficient template-to-node patcher (similar to `lit-html`).
+- [ ] **Declarative Event Handlers**: Support attributes like `@click` to simplify event binding in `ExbaComponent`.
+- [ ] **Theming Engine**: Deep integration with VS Code's CSS variables (`--vscode-editor-foreground`, etc.).
 
-## 🛠️ Framework & Webview Enhancements
-
-- [ ] **Declarative Event Handlers**:
-  Upgrade [wasm-framework.ts](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/webview/wasm-framework.ts) to support declarative event attributes (e.g., `@click="handleAction"` or `onclick="${this.bind(this.handler)}"`), removing manual `addEventListener` binding in render loops.
-- [ ] **Advanced Fuzzy Search**:
-  Integrate a lightweight, zero-dependency fuzzy search algorithm (like a simple Levenshtein distance helper or `fuse.js` port) in [app-component.ts](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/webview/app-component.ts) to score and sort search results by relevance rather than simple substring matching.
-- [ ] **Interactive Grid Actions**:
-  Wire card clicks in the Explorer view to post messages back to the VS Code extension host (`acquireVsCodeApi().postMessage()`) to trigger editor behavior, show notifications, or open details pages.
-- [ ] **SVG Chart Components**:
-  Build a reusable SVG chart custom element (e.g., `<wasm-chart>`) to render growth projections and statistical charts calculated by the Rust-WASM core.
-
----
-
-## 🦀 Rust WASM Core Enhancements
-
-- [ ] **Advanced Calculations**:
-  Expand [lib.rs](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/rust/src/lib.rs) with more complex metrics: compound growth charts, cohort retention curves, or cash-flow modeling.
-- [ ] **Data Types Validation**:
-  Add validation in the Rust core to ensure numeric values (like negative spends or out-of-bound percentages) return explicit Rust `Result::Err` errors mapped to UI warnings in the webview.
-- [ ] **WASM Unit Testing**:
-  Set up `wasm-bindgen-test` to execute unit tests on the Rust metrics calculators directly in headless environments.
-
----
+## 🦀 Rust WASM Core Roadmap
+- [ ] **Binary Communication**: Move from JSON to Bincode or Protocol Buffers for even faster JS/WASM data exchange.
+- [ ] **Parallel Processing**: Explore WASM threads for ultra-heavy background calculations.
+- [ ] **Advanced Algorithms**: Implement more complex fuzzy matching (e.g., Jaro-Winkler) and cache result scoring.
 
 ## 🔌 VS Code Integration
+- [ ] **Workspace Listeners**: Auto-refresh dashboard when specific workspace files change.
+- [ ] **Language Server**: Connect the Rust engine to a Language Server to provide diagnostics based on WASM logic.
+- [ ] **Status Bar Integration**: Expose WASM-calculated metrics directly in the VS Code status bar.
 
-- [ ] **Workspace File Listeners**:
-  In [treeView.ts](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/treeView.ts), register a `vscode.workspace.onDidSaveTextDocument` listener to automatically reload and refresh package dependencies when the workspace `package.json` file is saved.
-- [ ] **Add Language Server Diagnostics**:
-  Expose a basic autocomplete and diagnostics provider in [extension.ts](file:///media/naranyala/Data/projects-remote/exba-vscode-extension/src/extension.ts) using the newly installed `vscode-languageserver` packages to showcase language integration capabilities.
-
----
-
-## 📦 Tooling & CI/CD
-
-- [ ] **Local VSCE packaging script**:
-  Add a local task runner script to package the extension without needing global npm installs of `@vscode/vsce`.
-- [ ] **GitHub Action Pipeline**:
-  Set up a GitHub workflow to compile Rust, bundle JS with esbuild, and compile the final `.vsix` artifact on every main branch push.
+## 📦 Tooling & DevOps
+- [ ] **CI/CD Pipeline**: Automated GitHub Action to compile Rust, bundle JS, and package `.vsix`.
+- [ ] **Package Script**: Local script to bundle the extension without global `vsce` dependency.

@@ -8,7 +8,9 @@
         "vscode": "^1.100.0"
     },
     "main": "./dist/extension.js",
-    "activationEvents": [],
+    "activationEvents": [
+        "onStartupFinished"
+    ],
     "contributes": {
         "viewsContainers": {
             "activitybar": [
@@ -31,49 +33,78 @@
         },
         "commands": [
             {
-                "command": "samples.helloWorld",
-                "category": "Samples",
-                "title": "Samples: Hello World"
+                "command": "exba.helloWorld",
+                "category": "EXBA",
+                "title": "EXBA: Hello World"
             },
             {
-                "command": "samples.showWebview",
-                "category": "Samples",
-                "title": "Samples: Webview Demo (Cat)"
+                "command": "exba.showWebview",
+                "category": "EXBA",
+                "title": "EXBA: Webview Demo (Cat)"
             },
             {
-                "command": "samples.showDashboard",
-                "category": "Samples",
-                "title": "Samples: WASM Web Component Dashboard"
+                "command": "exba.showDashboard",
+                "category": "EXBA",
+                "title": "EXBA: Show Dashboard Panel",
+                "icon": "$(dashboard)"
             },
             {
-                "command": "samples.listWorkspaceFiles",
-                "category": "Samples",
-                "title": "Samples: List Workspace Files"
+                "command": "exba.listWorkspaceFiles",
+                "category": "EXBA",
+                "title": "EXBA: List Workspace Files"
             },
             {
-                "command": "samples.insertSnippet",
-                "category": "Samples",
-                "title": "Samples: Insert Snippet"
+                "command": "exba.insertSnippet",
+                "category": "EXBA",
+                "title": "EXBA: Insert Snippet"
             },
             {
-                "command": "samples.showAdvancedPrompt",
-                "category": "Samples",
-                "title": "Samples: Show Advanced Prompt"
+                "command": "exba.showAdvancedPrompt",
+                "category": "EXBA",
+                "title": "EXBA: Show Advanced Prompt"
+            },
+            {
+                "command": "exba.toggleSidebarView",
+                "category": "EXBA",
+                "title": "EXBA: Toggle Sidebar View",
+                "icon": "$(layout-sidebar-left)"
             },
             {
                 "command": "nodeDependencies.refreshEntry",
-                "category": "Samples",
+                "category": "EXBA",
                 "title": "Refresh Dependencies",
                 "icon": {
                     "light": "media/dep.svg",
                     "dark": "media/dep.svg"
                 }
             }
-        ]
+        ],
+        "menus": {
+            "editor/title": [
+                {
+                    "command": "exba.toggleSidebarView",
+                    "group": "navigation",
+                    "when": "true"
+                },
+                {
+                    "command": "exba.showDashboard",
+                    "group": "navigation",
+                    "when": "true"
+                }
+            ],
+            "view/title": [
+                {
+                    "command": "exba.showDashboard",
+                    "group": "navigation",
+                    "when": "view == nodeDependencies"
+                }
+            ]
+        }
     },
     "dependencies": {
         "@vscode/wasm-component-model": "^1.0.0",
         "@vscode/webview-ui-toolkit": "^1.4.0",
+        "goober": "^2.1.19",
         "vscode-languageclient": "^9.0.1",
         "vscode-languageserver": "^9.0.1"
     },
@@ -81,20 +112,29 @@
         "@biomejs/biome": "^1.9.4",
         "@rsbuild/core": "^2.0.11",
         "@rspack/cli": "^2.0.6",
+        "@testing-library/dom": "^10.4.1",
         "@types/node": "^22",
         "@types/vscode": "^1.100.0",
         "@vscode/test-electron": "^2.4.1",
         "esbuild": "^0.25.0",
+        "happy-dom": "^20.10.2",
         "rspack": "^0.1.1",
-        "typescript": "^5.9.2"
+        "typescript": "^5.9.2",
+        "vitest": "^4.1.8"
     },
     "scripts": {
         "vscode:prepublish": "bun run build",
-        "build:rust": "cargo build --target wasm32-unknown-unknown --manifest-path src/rust/Cargo.toml",
+        "build:rust": "cargo build --target wasm32-unknown-unknown --manifest-path rust/Cargo.toml",
         "build:js": "node ./bin/build.js",
         "build": "bun run build:rust && bun run build:js",
+        "test:rust": "cargo test --manifest-path rust/Cargo.toml",
+        "test:webview": "vitest run",
+        "test:vscode": "vscode-test",
+        "test": "bun run test:rust && bun run test:webview",
         "lint": "biome lint .",
         "format": "biome format --write .",
-        "check": "biome check --write ."
+        "check": "biome check --write .",
+        "link:local": "node ./bin/link-extension.js",
+        "launch": "node ./bin/launch.js"
     }
 }

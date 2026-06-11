@@ -1,47 +1,60 @@
-import * as vscode from "vscode";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import * as vscode from "vscode";
 
 export function registerWorkspaceShowcase(context: vscode.ExtensionContext) {
     // 1. Status Bar Item
-    let statusBarItem: vscode.StatusBarItem;
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+    statusBarItem.command = "exba.toggleSidebarView";
+    statusBarItem.tooltip = "Click to toggle Package Explorer sidebar";
+
+    // 1b. EXBA Dashboard Status Bar Item
+    const dashboardStatusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Right,
+        101,
+    );
+    dashboardStatusBarItem.command = "exba.showDashboard";
+    dashboardStatusBarItem.text = "$(dashboard) EXBA Dashboard";
+    dashboardStatusBarItem.tooltip = "Click to toggle EXBA WASM Dashboard Panel";
+    dashboardStatusBarItem.show();
 
     context.subscriptions.push(
-        vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100),
+        statusBarItem,
+        dashboardStatusBarItem,
         vscode.workspace.onDidChangeWorkspaceFolders(() => {
             updateStatusBarItem();
-        })
+        }),
     );
 
     function updateStatusBarItem() {
         const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
         if (statusBarItem) {
-            statusBarItem.text = workspaceFolder ? `$(folder) ${path.basename(workspaceFolder.uri.fsPath)}` : "$(folder) No Workspace";
+            statusBarItem.text = workspaceFolder
+                ? `$(folder) ${path.basename(workspaceFolder.uri.fsPath)}`
+                : "$(folder) No Workspace";
             statusBarItem.show();
         }
     }
 
     // Initialization of status bar
-    context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(() => {
-        updateStatusBarItem();
-    }));
+    context.subscriptions.push(
+        vscode.window.onDidChangeActiveTextEditor(() => {
+            updateStatusBarItem();
+        }),
+    );
 
     // We'll initialize it in the activate function or here if we can access it.
     // For simplicity in this showcase, we will use a trick to initialize it after registration.
     // In a real extension, you'd manage this lifecycle more carefully.
-    
-    // Actually, let's just define it and let the caller handle it or use a lazy approach.
-    // But for a showcase, let's just do it.
-    statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    context.subscriptions.push(statusBarItem);
+
     updateStatusBarItem();
     statusBarItem.show();
 
     // 2. Commands
-    
+
     // Command: List Workspace Files (using File System API)
     context.subscriptions.push(
-        vscode.commands.registerCommand("samples.listWorkspaceFiles", async () => {
+        vscode.commands.registerCommand("exba.listWorkspaceFiles", async () => {
             const workspaceFolders = vscode.workspace.workspaceFolders;
             if (!workspaceFolders) {
                 vscode.window.showErrorMessage("No workspace folder is open.");
@@ -50,14 +63,14 @@ export function registerWorkspaceShowcase(context: vscode.ExtensionContext) {
 
             const rootPath = workspaceFolders[0].uri.fsPath;
             const files = await listFilesRecursive(rootPath);
-            
-            const fileList = files.map(f => path.relative(rootPath, f)).join("\n");
-            
+
+            const fileList = files.map((f) => path.relative(rootPath, f)).join("\n");
+
             const panel = vscode.window.createWebviewPanel(
                 "workspaceFiles",
                 "Workspace File Explorer",
                 vscode.ViewColumn.Two,
-                { enableScripts: true }
+                { enableScripts: true },
             );
 
             panel.webview.html = `
@@ -75,12 +88,12 @@ export function registerWorkspaceShowcase(context: vscode.ExtensionContext) {
                 </body>
                 </html>
             `;
-        })
+        }),
     );
 
     // Command: Insert Snippet (using Text Editor API)
     context.subscriptions.push(
-        vscode.commands.registerCommand("samples.insertSnippet", async () => {
+        vscode.commands.registerCommand("exba.insertSnippet", async () => {
             const editor = vscode.window.activeTextEditor;
             if (!editor) {
                 vscode.window.showErrorMessage("No active editor found.");
@@ -88,38 +101,45 @@ export function registerWorkspaceShowcase(context: vscode.ExtensionContext) {
             }
 
             const snippet = `\n// --- Inserted by Showcase Extension ---\nfunction helloWorld() {\n    console.log("Hello from the VS Code API showcase!");\n}\n`;
-            
-            editor.edit(editBuilder => {
-                editBuilder.insert(editor.selection.active, snippet);
-            }).then(success => {
-                if (success) {
-                    vscode.window.showInformationMessage("Snippet inserted successfully!");
-                }
-            });
-        })
+
+            editor
+                .edit((editBuilder) => {
+                    editBuilder.insert(editor.selection.active, snippet);
+                })
+                .then((success) => {
+                    if (success) {
+                        vscode.window.showInformationMessage("Snippet inserted successfully!");
+                    }
+                });
+        }),
     );
 
     // Command: Prompt with Actions (using Window API)
     context.subscriptions.push(
-        vscode.commands.registerCommand("samples.showAdvancedPrompt", async () => {
-            const selection = await vscode.window.showQuickPick(["Option A", "Option B", "Cancel"], {
-                placeHolder: "Choose an action to demonstrate the QuickPick API"
-            });
+        vscode.commands.registerCommand("exba.showAdvancedPrompt", async () => {
+            const selection = await vscode.window.showQuickPick(
+                ["Option A", "Option B", "Cancel"],
+                {
+                    placeHolder: "Choose an action to demonstrate the QuickPick API",
+                },
+            );
 
             if (selection === "Option A") {
                 vscode.window.showInformationMessage("You selected Option A");
             } else if (selection === "Option B") {
                 vscode.window.showWarningMessage("You selected Option B (Warning!)");
             }
-        })
+        }),
     );
 }
 
 async function listFilesRecursive(dir: string): Promise<string[]> {
     const entries = await fs.promises.readdir(dir, { withFileTypes: true });
-    const files = await Promise.all(entries.map(async (entry) => {
-        const res = path.resolve(dir, entry.name);
-        return entry.isDirectory() ? listFilesRecursive(res) : res;
-    }));
+    const files = await Promise.all(
+        entries.map(async (entry) => {
+            const res = path.resolve(dir, entry.name);
+            return entry.isDirectory() ? listFilesRecursive(res) : res;
+        }),
+    );
     return Array.prototype.concat(...files);
 }

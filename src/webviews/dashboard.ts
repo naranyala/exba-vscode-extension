@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 
 export function registerWasmDashboard(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-        vscode.commands.registerCommand("samples.showDashboard", () => {
+        vscode.commands.registerCommand("exba.showDashboard", () => {
             WasmDashboardPanel.createOrShow(context.extensionUri);
         }),
     );
@@ -23,7 +23,7 @@ class WasmDashboardPanel {
             : undefined;
 
         if (WasmDashboardPanel.currentPanel) {
-            WasmDashboardPanel.currentPanel._panel.reveal(column);
+            WasmDashboardPanel.currentPanel.dispose();
             return;
         }
 
@@ -46,6 +46,27 @@ class WasmDashboardPanel {
 
         this._update();
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+
+        // Handle messages from the webview
+        this._panel.webview.onDidReceiveMessage(
+            (message) => {
+                switch (message.command) {
+                    case "showNotification":
+                        vscode.window.showInformationMessage(message.payload.message);
+                        return;
+                    case "log":
+                        console.log(`[Webview Log] ${message.payload.message}`);
+                        return;
+                    case "extensionAction":
+                        vscode.window.showInformationMessage(
+                            `Action triggered for extension: ${message.payload.name}`,
+                        );
+                        return;
+                }
+            },
+            null,
+            this._disposables,
+        );
     }
 
     public dispose() {

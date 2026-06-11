@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 
 export function registerWebviewDemo(context: vscode.ExtensionContext) {
     context.subscriptions.push(
-        vscode.commands.registerCommand("samples.showWebview", () => {
+        vscode.commands.registerCommand("exba.showWebview", () => {
             const panel = vscode.window.createWebviewPanel(
                 "catWebview",
                 "Webview Demo (Cat)",

@@ -11,12 +11,22 @@ export function registerTreeView(context: vscode.ExtensionContext) {
     const nodeDependenciesProvider = new NodeDependenciesProvider(rootPath);
 
     // Register our Tree Data Provider under the view id matching the package.json contribution
-    vscode.window.registerTreeDataProvider("nodeDependencies", nodeDependenciesProvider);
+    const treeView = vscode.window.createTreeView("nodeDependencies", {
+        treeDataProvider: nodeDependenciesProvider,
+    });
 
     context.subscriptions.push(
+        treeView,
         vscode.commands.registerCommand("nodeDependencies.refreshEntry", () =>
             nodeDependenciesProvider.refresh(),
         ),
+        vscode.commands.registerCommand("exba.toggleSidebarView", () => {
+            if (treeView.visible) {
+                vscode.commands.executeCommand("workbench.action.toggleSidebarVisibility");
+            } else {
+                vscode.commands.executeCommand("nodeDependencies.focus");
+            }
+        }),
     );
 }
 

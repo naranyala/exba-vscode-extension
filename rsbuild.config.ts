@@ -1,23 +1,23 @@
-import { defineConfig } from '@rsbuild/core';
-import path from 'path';
+import path from "node:path";
+import { defineConfig } from "@rsbuild/core";
 
 export default defineConfig({
-  source: {
-    entry: {
-      index: './src/webview/app-component.ts',
+    source: {
+        entry: {
+            index: "./webview/components/app-component.ts",
+        },
     },
-  },
-  output: {
-    distPath: {
-      root: path.join(__dirname, 'dist/webview'),
+    output: {
+        distPath: {
+            root: path.join(__dirname, "dist/webview"),
+        },
+        filename: {
+            js: "bundle.js",
+            css: "index.css",
+        },
+        assetPrefix: "./",
     },
-    filename: {
-      js: 'bundle.js',
-      css: 'index.css',
+    html: {
+        template: "./webview/index.html",
     },
-    assetPrefix: './',
-  },
-  html: {
-    template: './src/webview/index.html',
-  },
 });

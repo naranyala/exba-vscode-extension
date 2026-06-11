@@ -1,92 +1,102 @@
-# Unified VS Code Extension Starter & Showcase
+# 🦀 Unified VS Code Extension: EXBA Starter
 
-A comprehensive starter kit and demonstration platform for modern Visual Studio Code extensions. This project showcases advanced extension patterns, including high-performance Rust-powered WebAssembly (WASM) integration within VS Code Webviews and reactive custom web components.
+A professional-grade VS Code extension starter leveraging **EXBA (Extended Browser API)**: Native Web Components, Signal-based reactivity, and a Rust-WASM core engine.
 
-## Overview
+## 🚀 Key Features
 
-This project is designed to serve as a blueprint for developers building sophisticated extensions. It moves beyond basic command implementations to demonstrate how to leverage native performance for heavy computations and modern web technologies for rich, reactive user interfaces within the VS Code environment.
+- **EXBA Framework**: A reactive, lightweight framework built on native browser APIs for maximum performance and minimal memory footprint.
+- **Rust-WASM Core**: Offloads heavy computation (fuzzy search, financial modeling, data processing) to a high-performance Rust engine.
+- **Signal Reactivity**: Granular, dependency-tracking state management (similar to SolidJS) implemented in a tiny ~50 line runtime.
+- **SVG Charting**: Real-time, reactive SVG growth curves calculated entirely in Rust and rendered via native Web Components.
+- **Full-Stack Testing**: 
+  - **Rust**: Native unit tests for the core engine.
+  - **Webview**: Vitest + Happy DOM for component and reactivity testing.
+  - **Extension**: VS Code integration testing.
+- **Modern Tooling**: Powered by **Bun**, **Rspack**, and **Rsbuild** for near-instant build times.
 
-## Key Features
+## 🧪 Testing
 
-* **Rust-WASM Integration**: Demonstrates how to compile Rust code to WebAssembly and execute it within a VS Code Webview for high-performance data processing.
-* **Reactive Web Components**: Showcases a custom-built, signal-based reactivity system implemented using native Web Components for efficient UI updates in Webviews.
-* **Advanced UI Patterns**: Implements complex UI elements including a dashboard with real-time metric calculations and an explorer mockup with fuzzy search capabilities.
-* **Tree View Implementation**: Demonstrates the integration of custom views into the VS Code Activity Bar and Side Bar.
-* **Unified Build Pipeline**: A streamlined build process orchestrated by Bun, leveraging Cargo for Rust/WASM compilation and esbuild for optimized JavaScript bundling.
+The project features a multi-layered testing strategy to ensure stability across the entire stack.
 
-## Technology Stack
-
-* **Languages**: TypeScript (Extension and Webview), Rust (WASM Engine)
-* **Runtime & Tooling**: Bun, Node.js, Cargo
-* **Bundler**: esbuild
-* **APIs**: VS Code Extension API (Webview, Tree View, Commands)
-* **Web Technologies**: Custom Elements, WebAssembly, CSS3 (Flexbox, Grid, Animations)
-
-## Project Structure
-
-```text
-.
-├── bin/                # Build utility scripts
-├── src/
-│   ├── extension.ts    # Main extension entry point
-│   ├── helloWorld.ts   # Basic command sample
-│   ├── treeView.ts     # Tree view implementation
-│   ├── wasmDashboard.ts# Webview panel management
-│   ├── webviewDemo.ts  # Webview sample implementation
-│   ├── rust/           # Rust source code for WASM engine
-│   │   └── src/        # Rust logic (metric calculations)
-│   └── webview/        # Webview frontend source
-│       ├── app-component.ts # Reactive custom elements
-│       ├── wasm-framework.ts# WASM integration layer
-│       └── ...         # HTML, CSS, and Utils
-├── package.json        # Project configuration and scripts
-└── tsconfig.json       # TypeScript configuration
+### 1. Rust Engine (Logic)
+Unit tests for the Rust-WASM core are written in native Rust and run in the standard environment.
+```bash
+bun run test:rust
 ```
 
-## Getting Started
+### 2. Webview (UI & Reactivity)
+The EXBA framework and web components are tested using **Vitest** and **Happy DOM**.
+```bash
+bun run test:webview
+```
+*Tests signals, memos, lifecycle hooks, and component rendering.*
+
+### 3. VS Code Extension (Integration)
+Integration tests that run inside a real VS Code instance.
+```bash
+bun run test:vscode
+```
+
+### 4. Run All Tests
+```bash
+bun run test
+```
+
+## 🏗️ Architecture
+
+### 1. Webview (The Display)
+Located in `src/webview`, the UI is built using the **EXBA** library.
+- **ExbaComponent**: The base class for all UI elements.
+- **Isolation**: Uses **Shadow DOM** to ensure extension styles never leak or conflict with VS Code.
+- **Reactivity**: Components are automatically kept in sync with **Signals**. When a signal updates, only the components using that signal re-render.
+
+### 2. Rust Engine (The Brain)
+Located in `src/rust`, this module is compiled to WebAssembly.
+- **Logic**: Handles fuzzy scoring for search, complex projections, and data serialization via **Serde**.
+- **Efficiency**: Communicates with JavaScript via shared memory buffers and JSON.
+
+### 3. Extension Host (The Glue)
+The standard VS Code extension layer that manages webview panels, tree views, and commands.
+
+## 🛠️ Getting Started
 
 ### Prerequisites
-
-Ensure you have the following installed on your system:
-
-* **Node.js** (LTS recommended)
-* **Bun** (for task orchestration)
-* **Rust & Cargo** (for WASM compilation)
+- [Bun](https://bun.sh/)
+- [Rust & Cargo](https://rustup.rs/) (with `wasm32-unknown-unknown` target)
 
 ### Installation
-
-1. Clone the repository.
-2. Install dependencies using Bun:
-
 ```bash
 bun install
+rustup target add wasm32-unknown-unknown
 ```
 
-### Building the Project
-
-The build process compiles the Rust engine to WASM, bundles the webview assets, and prepares the extension distribution.
-
+### Development
 ```bash
+# Build everything (Rust + JS)
 bun run build
+
+# Run Tests
+bun run test         # Runs both Rust and Webview tests
+bun run test:rust    # Rust only
+bun run test:webview # Vitest only
 ```
 
-This command executes:
-1. `cargo build --target wasm32-unknown-unknown` to compile the Rust engine.
-2. `node ./bin/esbuild.js` to bundle the TypeScript/Webview assets.
+### Running Locally
+1. **Build the extension**: Ensure the `dist` folder is populated by running `bun run build`.
+2. **Open in VS Code**: Open this project folder in VS Code.
+3. **Launch**: Press `F5` (or go to the **Run and Debug** view and click **Run Extension**). This will open a new "Extension Development Host" window with the extension active.
+4. **Trigger Commands**: In the new window, open the Command Palette (`Ctrl+Shift+P`) and search for `Samples: WASM Web Component Dashboard`.
 
-### Running and Debugging
+### Packaging for Manual Install
+If you want to install the extension permanently in your local VS Code:
+1. **Package**: Run `npx @vscode/vsce package` to generate a `.vsix` file.
+2. **Install**: Open the Extensions view in VS Code, click the `...` (Views and More Actions), and select **Install from VSIX...**.
 
-1. Open the project in Visual Studio Code.
-2. Press `F5` to launch a new VS Code instance with the extension loaded.
-3. Use the "Samples" command palette to trigger the different showcases:
-    * `Samples: Hello World`
-    * `Samples: Webview Demo (Cat)`
-    * `Samples: WASM Web Component Dashboard`
+## 📜 Scripts Reference
 
-## Development Commands
+- `build`: Full production build.
+- `lint`/`format`: Code quality via Biome.
+- `test`: Comprehensive testing suite.
 
-* `bun run build`: Full build of Rust and JS assets.
-* `bun run build:rust`: Only build the Rust WASM component.
-* `bun run build:js`: Only build the JavaScript/Webview assets.
-* `bun run lint`: Run Biome linter.
-* `bun run format`: Format code using Biome.
+## 📄 License
+MIT

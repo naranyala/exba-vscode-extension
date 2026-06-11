@@ -1,4 +1,4 @@
-const { execSync } = require("child_process");
+const { execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
@@ -35,8 +35,8 @@ async function build() {
     // 4. Copy WASM binary to dist/wasm/
     console.log("Step 4: Finalizing assets...");
     fs.mkdirSync("dist/wasm", { recursive: true });
-    const debugWasm = "src/rust/target/wasm32-unknown-unknown/debug/dashboard_engine.wasm";
-    const releaseWasm = "src/rust/target/wasm32-unknown-unknown/release/dashboard_engine.wasm";
+    const debugWasm = "rust/target/wasm32-unknown-unknown/debug/dashboard_engine.wasm";
+    const releaseWasm = "rust/target/wasm32-unknown-unknown/release/dashboard_engine.wasm";
 
     let wasmSource = null;
     if (fs.existsSync(releaseWasm)) {
