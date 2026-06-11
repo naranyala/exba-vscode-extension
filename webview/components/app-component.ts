@@ -1,6 +1,10 @@
+import "../index.css";
 import { ExbaComponent, css, defineComponent, html, memo, signal } from "../core/exba";
 import { callWasm, debounce, formatCurrency, formatNumber, passStringToWasm } from "../core/utils";
 import { vscode } from "../core/vscode-service";
+
+// Export ExbaComponent as WasmComponent for webview HTML to import
+export const WasmComponent = ExbaComponent;
 
 // 1. Create reactive signals shared by all components
 const [getUsers, setUsers] = signal(25000);
@@ -11,8 +15,15 @@ const [getGrowth, setGrowth] = signal(18);
 const [getTab, setTab] = signal<"dashboard" | "explorer">("explorer");
 const [getSearch, setSearch] = signal("");
 
+// 1b. WASM readiness signal (memos depend on this to re-evaluate after WASM loads)
+const [getWasmReady, setWasmReady] = signal(false);
+
+// 1c. Grid menu signals (isolated for sidepanel)
+const [getGridSearch, setGridSearch] = signal("");
+
 // 2. Define Memos (Derived State)
 const getMetrics = memo(() => {
+    getWasmReady();
     const wasm = (ExbaComponent as any).wasm;
     if (!wasm) return null;
     return callWasm(
@@ -26,6 +37,7 @@ const getMetrics = memo(() => {
 });
 
 const getChartData = memo(() => {
+    getWasmReady();
     const wasm = (ExbaComponent as any).wasm;
     const metrics = getMetrics();
     if (!wasm || !metrics) return [];
@@ -36,6 +48,7 @@ const getChartData = memo(() => {
 });
 
 const getFilteredExtensions = memo(() => {
+    getWasmReady();
     const wasm = (ExbaComponent as any).wasm;
     const search = getSearch().toLowerCase().trim();
     if (!wasm) return [];
@@ -52,6 +65,29 @@ const getFilteredExtensions = memo(() => {
         wasm.dealloc(tPtr, tLen);
 
         return { ...ext, score };
+    })
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+});
+
+const getFilteredGridItems = memo(() => {
+    getWasmReady();
+    const wasm = (ExbaComponent as any).wasm;
+    const search = getGridSearch().toLowerCase().trim();
+    if (!wasm) return [];
+
+    return GRID_ITEMS.map((item) => {
+        if (!search) return { ...item, score: 100 };
+
+        const [qPtr, qLen] = passStringToWasm(wasm, search);
+        const targetText = `${item.name} ${item.description} ${item.category} ${item.tags.join(" ")}`;
+        const [tPtr, tLen] = passStringToWasm(wasm, targetText);
+
+        const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
+        wasm.dealloc(qPtr, qLen);
+        wasm.dealloc(tPtr, tLen);
+
+        return { ...item, score };
     })
         .filter((item) => item.score > 0)
         .sort((a, b) => b.score - a.score);
@@ -107,6 +143,99 @@ const EXTENSIONS: ExtensionItem[] = [
         category: "Aesthetics",
         icon: "🎨",
         tags: ["theme", "styles", "colors", "css"],
+    },
+];
+
+// Grid Menu items for EXBA sidepanel
+interface GridItem {
+    name: string;
+    description: string;
+    category: string;
+    icon: string;
+    tags: string[];
+    action: string;
+}
+
+const GRID_ITEMS: GridItem[] = [
+    {
+        name: "WASM Engine",
+        description: "Native Rust-WASM calculation engine for high-performance metrics.",
+        category: "Core",
+        icon: "🚀",
+        tags: ["wasm", "rust", "engine", "native"],
+        action: "extensionAction",
+    },
+    {
+        name: "Fuzzy Search",
+        description: "Real-time fuzzy matching powered by WebAssembly in Rust.",
+        category: "Search",
+        icon: "🔍",
+        tags: ["fuzzy", "search", "wasm", "rust"],
+        action: "extensionAction",
+    },
+    {
+        name: "Signal Framework",
+        description: "Reactive signals, memos, and effects for state management.",
+        category: "Framework",
+        icon: "⚡",
+        tags: ["reactive", "signals", "state", "framework"],
+        action: "extensionAction",
+    },
+    {
+        name: "Component Library",
+        description: "Custom web components with declarative templates and shadow DOM.",
+        category: "UI",
+        icon: "🧩",
+        tags: ["components", "web", "shadow-dom", "custom-elements"],
+        action: "extensionAction",
+    },
+    {
+        name: "Webview Bridge",
+        description: "VS Code extension communication via typed postMessage API.",
+        category: "Core",
+        icon: "🔗",
+        tags: ["vscode", "bridge", "messaging", "api"],
+        action: "extensionAction",
+    },
+    {
+        name: "Chart Generator",
+        description: "SVG revenue chart rendered from Rust-calculated projections.",
+        category: "Visualization",
+        icon: "📊",
+        tags: ["chart", "svg", "visualization", "rust"],
+        action: "extensionAction",
+    },
+    {
+        name: "Revenue Metrics",
+        description: "Business KPIs computed in native WASM with zero overhead.",
+        category: "Analytics",
+        icon: "💰",
+        tags: ["metrics", "revenue", "analytics", "kpi"],
+        action: "extensionAction",
+    },
+    {
+        name: "Tree Explorer",
+        description: "Workspace dependency tree view with refreshable data.",
+        category: "Explorer",
+        icon: "🌳",
+        tags: ["tree", "dependencies", "workspace", "explorer"],
+        action: "extensionAction",
+    },
+    {
+        name: "Dashboard Panel",
+        description: "Full analytics dashboard with configurable growth projections.",
+        category: "Analytics",
+        icon: "📈",
+        tags: ["dashboard", "analytics", "projections", "growth"],
+        action: "extensionAction",
+    },
+    {
+        name: "Rust WASM Bridge",
+        description: "Memory-safe string passing and function calls between JS and Rust.",
+        category: "Core",
+        icon: "🦀",
+        tags: ["rust", "wasm", "bridge", "memory"],
+        action: "extensionAction",
     },
 ];
 
@@ -859,4 +988,357 @@ export class DashboardApp extends ExbaComponent {
         `;
     }
 }
+
+// 6. Define the GridMenuApp component (standalone grid menu for sidepanel)
+export class GridMenuApp extends ExbaComponent {
+    styles() {
+        return css`
+            :host {
+                display: block;
+                font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+                color: #e2e8f0;
+                background: transparent;
+                padding: 0.75rem;
+                height: 100%;
+                box-sizing: border-box;
+                overflow-y: auto;
+                overflow-x: hidden;
+            }
+
+            .header {
+                margin-bottom: 0.75rem;
+                text-align: center;
+            }
+
+            .header h2 {
+                font-size: 1.1rem;
+                font-weight: 800;
+                margin: 0;
+                background: linear-gradient(135deg, #a78bfa 0%, #6366f1 100%);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+
+            .header p {
+                color: #64748b;
+                font-size: 0.65rem;
+                margin: 0.15rem 0 0 0;
+            }
+
+            .search-box {
+                width: 100%;
+                box-sizing: border-box;
+                padding: 0.55rem 0.85rem;
+                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                background: rgba(15, 23, 42, 0.5);
+                color: #ffffff;
+                font-size: 0.8rem;
+                outline: none;
+                transition: all 0.3s ease;
+                font-family: inherit;
+                margin-bottom: 0.75rem;
+            }
+
+            .search-box:focus {
+                border-color: #6366f1;
+                box-shadow: 0 0 10px rgba(99, 102, 241, 0.15);
+            }
+
+            .search-box::placeholder {
+                color: #475569;
+            }
+
+            .results-count {
+                font-size: 0.6rem;
+                color: #64748b;
+                margin-bottom: 0.5rem;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+                font-weight: 700;
+            }
+
+            .grid {
+                display: grid;
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .card {
+                background: rgba(30, 41, 59, 0.35);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-radius: 10px;
+                padding: 0.6rem 0.75rem;
+                display: flex;
+                gap: 0.6rem;
+                backdrop-filter: blur(8px);
+                box-shadow: 0 1px 8px 0 rgba(0, 0, 0, 0.12);
+                transition: border-color 0.2s ease, transform 0.2s ease;
+                cursor: pointer;
+                animation: fadeIn 0.25s ease-out;
+            }
+
+            .card:hover {
+                border-color: rgba(167, 139, 250, 0.3);
+                transform: translateY(-1px);
+            }
+
+            .icon {
+                font-size: 1.2rem;
+                background: rgba(255, 255, 255, 0.03);
+                width: 34px;
+                height: 34px;
+                border-radius: 8px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                flex-shrink: 0;
+            }
+
+            .content {
+                display: flex;
+                flex-direction: column;
+                gap: 0.15rem;
+                min-width: 0;
+            }
+
+            .content-top {
+                display: flex;
+                justify-content: space-between;
+                align-items: flex-start;
+                gap: 0.5rem;
+            }
+
+            .category {
+                font-size: 0.55rem;
+                text-transform: uppercase;
+                letter-spacing: 0.08em;
+                color: #a78bfa;
+                font-weight: 800;
+            }
+
+            .score {
+                font-size: 0.5rem;
+                color: #4ade80;
+                font-weight: 800;
+                white-space: nowrap;
+                background: rgba(74, 222, 128, 0.1);
+                padding: 0.1rem 0.35rem;
+                border-radius: 3px;
+            }
+
+            .title {
+                font-size: 0.8rem;
+                font-weight: 700;
+                color: #ffffff;
+            }
+
+            .desc {
+                font-size: 0.65rem;
+                color: #94a3b8;
+                line-height: 1.3;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                display: -webkit-box;
+                -webkit-line-clamp: 2;
+                -webkit-box-orient: vertical;
+            }
+
+            .tags {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 0.2rem;
+                margin-top: 0.2rem;
+            }
+
+            .tag {
+                font-size: 0.55rem;
+                padding: 0.1rem 0.3rem;
+                background: rgba(255, 255, 255, 0.03);
+                border-radius: 3px;
+                color: #64748b;
+            }
+
+            .fullscreen-bar {
+                margin-top: 1rem;
+                display: flex;
+                justify-content: center;
+            }
+
+            .fullscreen-btn {
+                background: rgba(99, 102, 241, 0.15);
+                border: 1px solid rgba(99, 102, 241, 0.2);
+                color: #a78bfa;
+                padding: 0.4rem 1rem;
+                border-radius: 8px;
+                font-size: 0.7rem;
+                font-weight: 700;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-family: inherit;
+                text-transform: uppercase;
+                letter-spacing: 0.05em;
+            }
+
+            .fullscreen-btn:hover {
+                background: rgba(99, 102, 241, 0.25);
+                border-color: rgba(99, 102, 241, 0.3);
+            }
+
+            .no-results {
+                padding: 2rem 0;
+                text-align: center;
+                color: #64748b;
+                font-size: 0.8rem;
+            }
+
+            .loading {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                padding: 2rem 0;
+                color: #94a3b8;
+            }
+
+            .spinner {
+                border: 2px solid rgba(255, 255, 255, 0.05);
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                border-left-color: #6366f1;
+                animation: spin 1s linear infinite;
+                margin-bottom: 0.5rem;
+            }
+
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
+            }
+
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(6px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+        `;
+    }
+
+    handleGridSearch = debounce((e: Event) => {
+        setGridSearch((e.target as HTMLInputElement).value);
+    }, 150);
+
+    handleGridClick(e: Event) {
+        const card = e.currentTarget as HTMLElement;
+        const name = card.getAttribute("data-name");
+        if (name) {
+            vscode.postMessage("extensionAction", { name });
+        }
+    }
+
+    handleFullscreen() {
+        vscode.postMessage("openFullscreen");
+    }
+
+    template() {
+        const wasm = (ExbaComponent as any).wasm;
+        if (!wasm) {
+            return html`
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <p>Loading WASM engine...</p>
+                </div>
+            `;
+        }
+
+        const search = getGridSearch();
+        const items = getFilteredGridItems();
+        const query = search.toLowerCase().trim();
+
+        return html`
+            <div class="header">
+                <h2>EXBA Grid Menu</h2>
+                <p>Fuzzy search powered by Rust-WASM</p>
+            </div>
+
+            <input 
+                type="text" 
+                class="search-box" 
+                placeholder="Search features..." 
+                value="${search}" 
+                id="grid-search"
+                on-input="handleGridSearch"
+                autofocus
+            />
+
+            <div class="results-count">
+                ${query ? `${items.length} result${items.length !== 1 ? "s" : ""} for "${search}"` : `${items.length} features`}
+            </div>
+
+            ${
+                items.length > 0
+                    ? html`
+                <div class="grid">
+                    ${items
+                        .map(
+                            (item) => html`
+                        <div class="card" on-click="handleGridClick" data-name="${item.name}">
+                            <div class="icon">${item.icon}</div>
+                            <div class="content">
+                                <div class="content-top">
+                                    <span class="category">${item.category}</span>
+                                    ${query ? html`<span class="score">${item.score}%</span>` : ""}
+                                </div>
+                                <span class="title">${item.name}</span>
+                                <span class="desc">${item.description}</span>
+                                <div class="tags">
+                                    ${item.tags.map((tag) => html`<span class="tag">#${tag}</span>`).join("")}
+                                </div>
+                            </div>
+                        </div>
+                    `,
+                        )
+                        .join("")}
+                </div>
+            `
+                    : html`
+                <div class="no-results">
+                    <p>No matches for "${search}"</p>
+                </div>
+            `
+            }
+
+            <div class="fullscreen-bar">
+                <button class="fullscreen-btn" on-click="handleFullscreen">Open Fullscreen</button>
+            </div>
+        `;
+    }
+}
+defineComponent("grid-menu-app", GridMenuApp);
 defineComponent("dashboard-app", DashboardApp);
+
+// Auto-initialize: read body data attributes, init WASM, mount component
+(async () => {
+    const root = document.getElementById("app-root");
+    if (!root) return;
+
+    try {
+        const wasmUri = document.body.dataset.wasmUri;
+        if (wasmUri) {
+            await ExbaComponent.initWasm(wasmUri);
+            setWasmReady(true);
+        }
+
+        const mode = document.body.dataset.mode || "dashboard";
+        const tagName = mode === "grid-menu" ? "grid-menu-app" : "dashboard-app";
+        const app = document.createElement(tagName);
+        root.appendChild(app);
+    } catch (err) {
+        console.error("Failed to initialize:", err);
+        root.innerHTML = `
+            <div style="padding: 2rem; text-align: center; color: #f87171;">
+                <h3>Failed to load</h3>
+                <p style="font-size:0.85rem">${err}</p>
+            </div>
+        `;
+    }
+})();

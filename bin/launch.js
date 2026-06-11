@@ -1,6 +1,5 @@
 const { execSync, spawn } = require("node:child_process");
 const path = require("node:path");
-const fs = require("node:fs");
 
 const projectDir = path.resolve(__dirname, "..");
 
@@ -12,21 +11,13 @@ try {
     process.exit(1);
 }
 
-console.log("\n2. Linking the extension...");
-try {
-    execSync("node ./bin/link-extension.js", { stdio: "inherit", cwd: projectDir });
-} catch (e) {
-    console.error("Linking failed.");
-    process.exit(1);
-}
-
-console.log("\n3. Launching Editor...");
+console.log("\n2. Launching Editor with extension path...");
 
 const editors = [
-    { cmd: "codium", args: ["."] },
-    { cmd: "/usr/share/codium/codium", args: ["."] },
-    { cmd: "cursor", args: ["."] },
-    { cmd: "code", args: ["."] },
+    { cmd: "code", args: [`--extensionDevelopmentPath=${projectDir}`, "."] },
+    { cmd: "codium", args: [`--extensionDevelopmentPath=${projectDir}`, "."] },
+    { cmd: "/usr/share/codium/codium", args: [`--extensionDevelopmentPath=${projectDir}`, "."] },
+    { cmd: "cursor", args: [`--extensionDevelopmentPath=${projectDir}`, "."] },
 ];
 
 let launched = false;

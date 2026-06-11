@@ -15,6 +15,14 @@ export function registerTreeView(context: vscode.ExtensionContext) {
         treeDataProvider: nodeDependenciesProvider,
     });
 
+    // Add a visual indicator (badge) to the sidebar icon
+    treeView.badge = { value: 1, tooltip: "EXBA Starter Active" };
+
+    // Track visibility to provide a context key for UI indicators
+    treeView.onDidChangeVisibility((e) => {
+        vscode.commands.executeCommand("setContext", "exba.sidebarVisible", e.visible);
+    });
+
     context.subscriptions.push(
         treeView,
         vscode.commands.registerCommand("nodeDependencies.refreshEntry", () =>

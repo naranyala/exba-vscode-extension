@@ -3,24 +3,12 @@ import * as path from "node:path";
 import * as vscode from "vscode";
 
 export function registerWorkspaceShowcase(context: vscode.ExtensionContext) {
-    // 1. Status Bar Item
-    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
-    statusBarItem.command = "exba.toggleSidebarView";
-    statusBarItem.tooltip = "Click to toggle Package Explorer sidebar";
-
-    // 1b. EXBA Dashboard Status Bar Item
-    const dashboardStatusBarItem = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        101,
-    );
-    dashboardStatusBarItem.command = "exba.showDashboard";
-    dashboardStatusBarItem.text = "$(dashboard) EXBA Dashboard";
-    dashboardStatusBarItem.tooltip = "Click to toggle EXBA WASM Dashboard Panel";
-    dashboardStatusBarItem.show();
+    // Workspace folder display (low priority, just informational)
+    const statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 50);
+    statusBarItem.tooltip = "Current workspace folder";
 
     context.subscriptions.push(
         statusBarItem,
-        dashboardStatusBarItem,
         vscode.workspace.onDidChangeWorkspaceFolders(() => {
             updateStatusBarItem();
         }),
@@ -36,16 +24,11 @@ export function registerWorkspaceShowcase(context: vscode.ExtensionContext) {
         }
     }
 
-    // Initialization of status bar
     context.subscriptions.push(
         vscode.window.onDidChangeActiveTextEditor(() => {
             updateStatusBarItem();
         }),
     );
-
-    // We'll initialize it in the activate function or here if we can access it.
-    // For simplicity in this showcase, we will use a trick to initialize it after registration.
-    // In a real extension, you'd manage this lifecycle more carefully.
 
     updateStatusBarItem();
     statusBarItem.show();

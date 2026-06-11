@@ -10,6 +10,8 @@ export default defineConfig({
     output: {
         distPath: {
             root: path.join(__dirname, "dist/webview"),
+            js: "./",
+            css: "./",
         },
         filename: {
             js: "bundle.js",

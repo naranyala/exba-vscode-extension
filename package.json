@@ -14,8 +14,8 @@
             "activitybar": [
                 {
                     "id": "package-explorer",
-                    "title": "Package Explorer",
-                    "icon": "media/dep.svg"
+                    "title": "EXBA Explorer",
+                    "icon": "media/exba-icon.svg"
                 }
             ]
         },
@@ -25,7 +25,14 @@
                     "id": "nodeDependencies",
                     "name": "Node Dependencies",
                     "icon": "media/dep.svg",
-                    "contextualTitle": "Package Explorer"
+                    "contextualTitle": "Package Explorer",
+                    "when": "exba.showNodeDependencies"
+                },
+                {
+                    "id": "exba.dashboardView",
+                    "type": "webview",
+                    "name": "EXBA Dashboard",
+                    "icon": "media/dep.svg"
                 }
             ]
         },
@@ -47,6 +54,12 @@
                 "icon": "$(dashboard)"
             },
             {
+                "command": "exba.focusDashboardView",
+                "category": "EXBA",
+                "title": "EXBA: Focus Dashboard Sidepanel",
+                "icon": "$(dashboard)"
+            },
+            {
                 "command": "exba.listWorkspaceFiles",
                 "category": "EXBA",
                 "title": "EXBA: List Workspace Files"
@@ -64,8 +77,20 @@
             {
                 "command": "exba.toggleSidebarView",
                 "category": "EXBA",
-                "title": "EXBA: Toggle Sidebar View",
+                "title": "EXBA: Toggle Left Sidebar View",
                 "icon": "$(layout-sidebar-left)"
+            },
+            {
+                "command": "workbench.action.toggleRightSideBarVisibility",
+                "category": "EXBA",
+                "title": "EXBA: Toggle Right Sidebar View",
+                "icon": "$(layout-sidebar-right)"
+            },
+            {
+                "command": "exba.toggleRightPanel",
+                "category": "EXBA",
+                "title": "EXBA: Toggle Right Panel",
+                "icon": "$(layout-sidebar-right)"
             },
             {
                 "command": "nodeDependencies.refreshEntry",
@@ -82,6 +107,21 @@
                 {
                     "command": "exba.toggleSidebarView",
                     "group": "navigation",
+                    "when": "!exba.sidebarVisible"
+                },
+                {
+                    "command": "exba.toggleSidebarView",
+                    "group": "navigation",
+                    "when": "exba.sidebarVisible"
+                },
+                {
+                    "command": "workbench.action.toggleRightSideBarVisibility",
+                    "group": "navigation",
+                    "when": "true"
+                },
+                {
+                    "command": "exba.toggleRightPanel",
+                    "group": "navigation",
                     "when": "true"
                 },
                 {
@@ -92,7 +132,12 @@
             ],
             "view/title": [
                 {
-                    "command": "exba.showDashboard",
+                    "command": "exba.focusDashboardView",
+                    "group": "navigation",
+                    "when": "view == exba.dashboardView"
+                },
+                {
+                    "command": "nodeDependencies.refreshEntry",
                     "group": "navigation",
                     "when": "view == nodeDependencies"
                 }
@@ -100,9 +145,12 @@
         }
     },
     "dependencies": {
+        "@tabler/icons": "^3.44.0",
         "@vscode/wasm-component-model": "^1.0.0",
         "@vscode/webview-ui-toolkit": "^1.4.0",
         "goober": "^2.1.19",
+        "iconoir": "^7.11.0",
+        "lucide-static": "^1.17.0",
         "vscode-languageclient": "^9.0.1",
         "vscode-languageserver": "^9.0.1"
     },

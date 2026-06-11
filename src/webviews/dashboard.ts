@@ -2,11 +2,116 @@ import * as fs from "node:fs";
 import * as vscode from "vscode";
 
 export function registerWasmDashboard(context: vscode.ExtensionContext) {
+    console.log("📊 Registering WASM Dashboard webview...");
+    
+    // 1. Existing Webview Panel (Editor Tab)
     context.subscriptions.push(
         vscode.commands.registerCommand("exba.showDashboard", () => {
+            console.log("📋 Opening Dashboard as Editor Panel...");
             WasmDashboardPanel.createOrShow(context.extensionUri);
         }),
     );
+
+    // 2. New Webview View (Sidebar Sidepanel)
+    const provider = new WasmDashboardViewProvider(context.extensionUri);
+    context.subscriptions.push(
+        vscode.window.registerWebviewViewProvider(WasmDashboardViewProvider.viewType, provider),
+    );
+    console.log("✅ Webview view provider registered for:", WasmDashboardViewProvider.viewType);
+
+    // Command to focus the sidepanel dashboard
+    context.subscriptions.push(
+        vscode.commands.registerCommand("exba.focusDashboardView", () => {
+            console.log("🎯 Executing focusDashboardView command...");
+            vscode.commands.executeCommand("exba.dashboardView.focus")
+                .then(() => console.log("✅ Dashboard view focused"))
+                .catch((err) => console.error("❌ Failed to focus dashboard view:", err));
+        }),
+    );
+}
+
+export class WasmDashboardViewProvider implements vscode.WebviewViewProvider {
+    public static readonly viewType = "exba.dashboardView";
+
+    constructor(private readonly _extensionUri: vscode.Uri) {}
+
+    public resolveWebviewView(
+        webviewView: vscode.WebviewView,
+        _context: vscode.WebviewViewResolveContext,
+        _token: vscode.CancellationToken,
+    ) {
+        console.log("🔧 Resolving EXBA Dashboard webview...");
+        
+        try {
+            webviewView.title = "";
+            webviewView.description = "";
+            webviewView.badge = { value: 0, tooltip: "" };
+            webviewView.webview.options = {
+                enableScripts: true,
+                localResourceRoots: [vscode.Uri.joinPath(this._extensionUri, "dist")],
+            };
+
+            const webview = webviewView.webview;
+
+            // Resolve resource URIs relative to unified dist folder
+            const scriptUri = webview.asWebviewUri(
+                vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "bundle.js"),
+            );
+            const cssUri = webview.asWebviewUri(
+                vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "index.css"),
+            );
+            const wasmUri = webview.asWebviewUri(
+                vscode.Uri.joinPath(this._extensionUri, "dist", "wasm", "dashboard_engine.wasm"),
+            );
+
+            const htmlPath = vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "index.html");
+            console.log("📄 Loading HTML from:", htmlPath.fsPath);
+            
+            let htmlContent = fs.readFileSync(htmlPath.fsPath, "utf8");
+            console.log("✅ HTML loaded, length:", htmlContent.length);
+
+            // Dynamically inject compiled URIs into index.html shell
+            htmlContent = htmlContent
+                .replace('"./bundle.js"', `"${scriptUri.toString()}"`)
+                .replace('"./index.css"', `"${cssUri.toString()}"`);
+
+            webview.html = htmlContent.replace(
+                "<body>",
+                `<body data-wasm-uri="${wasmUri.toString()}" data-mode="grid-menu">`,
+            );
+            
+            console.log("✅ Dashboard webview HTML loaded successfully (grid-menu mode)");
+
+            webview.onDidReceiveMessage((message) => {
+                switch (message.command) {
+                    case "showNotification":
+                        vscode.window.showInformationMessage(message.payload.message);
+                        return;
+                    case "log":
+                        console.log(`[Webview Log] ${message.payload.message}`);
+                        return;
+                    case "extensionAction":
+                        vscode.window.showInformationMessage(
+                            `Action triggered for extension: ${message.payload.name}`,
+                        );
+                        return;
+                    case "openFullscreen":
+                        vscode.commands.executeCommand("exba.showDashboard");
+                        return;
+                }
+            });
+        } catch (error) {
+            console.error("❌ Failed to resolve dashboard webview:", error);
+            webviewView.webview.html = `
+                <html>
+                    <body style="padding: 20px; font-family: system-ui;">
+                        <h2 style="color: #f87171;">Failed to Load Dashboard</h2>
+                        <p>${error}</p>
+                    </body>
+                </html>
+            `;
+        }
+    }
 }
 
 class WasmDashboardPanel {
@@ -43,7 +148,6 @@ class WasmDashboardPanel {
     private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
         this._panel = panel;
         this._extensionUri = extensionUri;
-
         this._update();
         this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
 
@@ -100,8 +204,8 @@ class WasmDashboardPanel {
 
         // Dynamically inject compiled URIs into index.html shell
         htmlContent = htmlContent
-            .replace("bundle.js", scriptUri.toString())
-            .replace("index.css", cssUri.toString());
+            .replace('"./bundle.js"', `"${scriptUri.toString()}"`)
+            .replace('"./index.css"', `"${cssUri.toString()}"`);
 
         this._panel.webview.html = htmlContent.replace(
             "<body>",
