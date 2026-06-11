@@ -121,23 +121,117 @@ export function defineComponent(tagName: string, componentClass: any) {
 }
 
 /**
+ * Helper recursively patches child nodes of DOM elements.
+ * Preserves activeElement (focused element) to prevent losing cursor position/focus.
+ */
+function patchNode(oldNode: Node, newNode: Node, activeElement: Element | null): boolean {
+    if (oldNode.nodeType !== newNode.nodeType) {
+        oldNode.replaceWith(newNode.cloneNode(true));
+        return true;
+    }
+
+    if (oldNode.nodeType === Node.TEXT_NODE) {
+        if (oldNode.textContent !== newNode.textContent) {
+            oldNode.textContent = newNode.textContent;
+            return true;
+        }
+        return false;
+    }
+
+    if (oldNode.nodeType === Node.ELEMENT_NODE) {
+        const oldEl = oldNode as Element;
+        const newEl = newNode as Element;
+
+        if (oldEl.tagName !== newEl.tagName) {
+            oldEl.replaceWith(newEl.cloneNode(true));
+            return true;
+        }
+
+        const isActive = oldEl === activeElement || oldEl.contains(activeElement);
+        
+        // Skip updating if outerHTML is exactly identical and it doesn't contain the active element
+        if (oldEl.outerHTML === newEl.outerHTML && !isActive) {
+            return false;
+        }
+
+        let hasChanges = false;
+
+        // Sync attributes from newEl to oldEl
+        for (const attr of Array.from(oldEl.attributes)) {
+            if (!newEl.hasAttribute(attr.name)) {
+                oldEl.removeAttribute(attr.name);
+                hasChanges = true;
+            }
+        }
+        for (const attr of Array.from(newEl.attributes)) {
+            if (oldEl.getAttribute(attr.name) !== attr.value) {
+                oldEl.setAttribute(attr.name, attr.value);
+                hasChanges = true;
+            }
+        }
+
+        // Sync child nodes recursively
+        const oldChildren = Array.from(oldEl.childNodes);
+        const newChildren = Array.from(newEl.childNodes);
+        const maxLen = Math.max(oldChildren.length, newChildren.length);
+
+        for (let i = 0; i < maxLen; i++) {
+            const oldChild = oldChildren[i];
+            const newChild = newChildren[i];
+
+            if (!oldChild && newChild) {
+                oldEl.appendChild(newChild.cloneNode(true));
+                hasChanges = true;
+            } else if (oldChild && !newChild) {
+                oldChild.remove();
+                hasChanges = true;
+            } else if (oldChild && newChild) {
+                const childChanged = patchNode(oldChild, newChild, activeElement);
+                if (childChanged) hasChanges = true;
+            }
+        }
+
+        return hasChanges;
+    }
+
+    return false;
+}
+
+/**
  * Handles DOM reconciliation and declarative event binding.
  */
 const DOMRenderer = {
     render(shadow: ShadowRoot, content: string, component: ExbaComponent) {
-        const activeElementId = shadow.activeElement?.id;
-        const selectionStart = (shadow.activeElement as HTMLInputElement)?.selectionStart;
-        const selectionEnd = (shadow.activeElement as HTMLInputElement)?.selectionEnd;
+        const activeElement = shadow.activeElement as HTMLInputElement;
 
-        // Efficiently update only the content part if needed (naive innerHTML for now)
-        shadow.innerHTML = content;
+        // Parse content
+        const temp = document.createElement("div");
+        temp.innerHTML = content;
 
-        // 1. Synchronize input element properties
+        // Patch only the template children, skipping the style tag at index 0
+        const oldChildren = Array.from(shadow.childNodes).slice(1);
+        const newChildren = Array.from(temp.childNodes);
+        const maxLen = Math.max(oldChildren.length, newChildren.length);
+
+        for (let i = 0; i < maxLen; i++) {
+            const oldChild = oldChildren[i];
+            const newChild = newChildren[i];
+
+            if (!oldChild && newChild) {
+                shadow.appendChild(newChild.cloneNode(true));
+            } else if (oldChild && !newChild) {
+                oldChild.remove();
+            } else if (oldChild && newChild) {
+                patchNode(oldChild, newChild, activeElement);
+            }
+        }
+
+        // 1. Synchronize input element properties for non-active elements
         const inputs = shadow.querySelectorAll("input, select, textarea");
         for (const el of Array.from(inputs)) {
             const inputEl = el as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
             const valAttr = inputEl.getAttribute("value");
-            if (valAttr !== null) {
+            if (valAttr !== null && inputEl !== activeElement) {
                 inputEl.value = valAttr;
             }
         }
@@ -152,24 +246,13 @@ const DOMRenderer = {
                     const handler = (component as any)[handlerName];
 
                     if (typeof handler === "function") {
-                        el.addEventListener(eventName, (e) => handler.call(component, e));
+                        const key = `__exba_bound_${eventName}`;
+                        if (!(el as any)[key]) {
+                            el.addEventListener(eventName, (e) => handler.call(component, e));
+                            (el as any)[key] = true;
+                        }
                     }
                     el.removeAttribute(attr.name);
-                }
-            }
-        }
-
-        // 3. Restore focus and selection
-        if (activeElementId) {
-            const el = shadow.getElementById(activeElementId) as HTMLInputElement;
-            if (el) {
-                el.focus();
-                if (
-                    selectionStart !== null &&
-                    selectionEnd !== null &&
-                    (el.type === "text" || el.type === "search")
-                ) {
-                    el.setSelectionRange(selectionStart, selectionEnd);
                 }
             }
         }
@@ -293,10 +376,18 @@ export abstract class ExbaComponent extends HTMLElement {
     }
 
     private render() {
-        const fullContent = html`
-            <style>${this.styles()}</style>
-            ${this.template()}
-        `;
-        DOMRenderer.render(this.shadow, fullContent, this);
+        let styleEl = this.shadow.querySelector("style");
+        if (!styleEl) {
+            styleEl = document.createElement("style");
+            styleEl.textContent = this.styles();
+            this.shadow.appendChild(styleEl);
+        } else {
+            const newStyles = this.styles();
+            if (styleEl.textContent !== newStyles) {
+                styleEl.textContent = newStyles;
+            }
+        }
+
+        DOMRenderer.render(this.shadow, this.template(), this);
     }
 }
