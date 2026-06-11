@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { effect, memo, signal } from "../core/exba";
+import { batch, effect, memo, signal, untrack } from "../core/exba";
 
 describe("WasmFramework Signals", () => {
     it("should track and update values", () => {
@@ -57,5 +57,66 @@ describe("WasmFramework Signals", () => {
         await new Promise((resolve) => queueMicrotask(resolve as any));
         expect(doubled()).toBe(10);
         expect(spy).toHaveBeenCalledWith(10);
+    });
+
+    it("should not track dependencies inside untrack", async () => {
+        const [getCount, setCount] = signal(0);
+        const [getOther, setOther] = signal("a");
+        const spy = vi.fn();
+
+        effect(() => {
+            untrack(() => getCount());
+            spy(getOther());
+        });
+
+        expect(spy).toHaveBeenCalledWith("a");
+        setCount(999);
+        await new Promise((resolve) => queueMicrotask(resolve as any));
+        expect(spy).toHaveBeenCalledTimes(1);
+
+        setOther("b");
+        await new Promise((resolve) => queueMicrotask(resolve as any));
+        expect(spy).toHaveBeenCalledTimes(2);
+        expect(spy).toHaveBeenCalledWith("b");
+    });
+
+    it("should batch updates synchronously with batch()", async () => {
+        const [getA, setA] = signal(0);
+        const [getB, setB] = signal(0);
+        const spy = vi.fn();
+
+        effect(() => {
+            spy(getA() + getB());
+        });
+
+        spy.mockClear();
+        batch(() => {
+            setA(10);
+            setB(20);
+        });
+
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenCalledWith(30);
+    });
+
+    it("should handle nested batch calls", async () => {
+        const [getCount, setCount] = signal(0);
+        const spy = vi.fn();
+
+        effect(() => {
+            spy(getCount());
+        });
+
+        spy.mockClear();
+        batch(() => {
+            setCount(1);
+            batch(() => {
+                setCount(2);
+            });
+            setCount(3);
+        });
+
+        expect(spy).toHaveBeenCalledTimes(1);
+        expect(spy).toHaveBeenCalledWith(3);
     });
 });

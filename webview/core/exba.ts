@@ -63,6 +63,41 @@ export function memo<T>(fn: () => T) {
 }
 
 /**
+ * Runs a function without tracking any signal dependencies.
+ * Useful when you need to read a signal inside an effect without re-subscribing.
+ */
+export function untrack<T>(fn: () => T): T {
+    dependencyTracker.push(null as any);
+    try {
+        return fn();
+    } finally {
+        dependencyTracker.pop();
+    }
+}
+
+/**
+ * Groups multiple signal updates and flushes them synchronously at the end.
+ * All effects triggered by updates inside the batch run exactly once after fn returns.
+ */
+export function batch(fn: () => void): void {
+    if (isBatching) {
+        fn();
+        return;
+    }
+    isBatching = true;
+    try {
+        fn();
+    } finally {
+        isBatching = false;
+        const effects = Array.from(pendingEffects);
+        pendingEffects.clear();
+        for (const effect of effects) {
+            effect();
+        }
+    }
+}
+
+/**
  * Runs a side effect and tracks its dependencies.
  * Returns a function to stop the effect.
  */
@@ -148,7 +183,7 @@ function patchNode(oldNode: Node, newNode: Node, activeElement: Element | null):
         }
 
         const isActive = oldEl === activeElement || oldEl.contains(activeElement);
-        
+
         // Skip updating if outerHTML is exactly identical and it doesn't contain the active element
         if (oldEl.outerHTML === newEl.outerHTML && !isActive) {
             return false;
@@ -208,8 +243,13 @@ const DOMRenderer = {
         const temp = document.createElement("div");
         temp.innerHTML = content;
 
-        // Patch only the template children, skipping the style tag at index 0
-        const oldChildren = Array.from(shadow.childNodes).slice(1);
+        // Patch only the template children, skipping the style tag at index 0 and ignoring any goober style tags
+        const oldChildren = Array.from(shadow.childNodes)
+            .slice(1)
+            .filter((node) => {
+                const el = node as Element;
+                return el.tagName !== "STYLE" || el.id !== "_goober";
+            });
         const newChildren = Array.from(temp.childNodes);
         const maxLen = Math.max(oldChildren.length, newChildren.length);
 
@@ -376,11 +416,11 @@ export abstract class ExbaComponent extends HTMLElement {
     }
 
     private render() {
-        let styleEl = this.shadow.querySelector("style");
+        let styleEl = this.shadow.querySelector("style:not(#_goober)");
         if (!styleEl) {
             styleEl = document.createElement("style");
             styleEl.textContent = this.styles();
-            this.shadow.appendChild(styleEl);
+            this.shadow.prepend(styleEl);
         } else {
             const newStyles = this.styles();
             if (styleEl.textContent !== newStyles) {

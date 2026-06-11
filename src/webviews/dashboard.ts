@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 
 export function registerWasmDashboard(context: vscode.ExtensionContext) {
     console.log("📊 Registering WASM Dashboard webview...");
-    
+
     // 1. Existing Webview Panel (Editor Tab)
     context.subscriptions.push(
         vscode.commands.registerCommand("exba.showDashboard", () => {
@@ -23,7 +23,8 @@ export function registerWasmDashboard(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("exba.focusDashboardView", () => {
             console.log("🎯 Executing focusDashboardView command...");
-            vscode.commands.executeCommand("exba.dashboardView.focus")
+            vscode.commands
+                .executeCommand("exba.dashboardView.focus")
                 .then(() => console.log("✅ Dashboard view focused"))
                 .catch((err) => console.error("❌ Failed to focus dashboard view:", err));
         }),
@@ -41,7 +42,7 @@ export class WasmDashboardViewProvider implements vscode.WebviewViewProvider {
         _token: vscode.CancellationToken,
     ) {
         console.log("🔧 Resolving EXBA Dashboard webview...");
-        
+
         try {
             webviewView.title = "";
             webviewView.description = "";
@@ -64,9 +65,14 @@ export class WasmDashboardViewProvider implements vscode.WebviewViewProvider {
                 vscode.Uri.joinPath(this._extensionUri, "dist", "wasm", "dashboard_engine.wasm"),
             );
 
-            const htmlPath = vscode.Uri.joinPath(this._extensionUri, "dist", "webview", "index.html");
+            const htmlPath = vscode.Uri.joinPath(
+                this._extensionUri,
+                "dist",
+                "webview",
+                "index.html",
+            );
             console.log("📄 Loading HTML from:", htmlPath.fsPath);
-            
+
             let htmlContent = fs.readFileSync(htmlPath.fsPath, "utf8");
             console.log("✅ HTML loaded, length:", htmlContent.length);
 
@@ -79,7 +85,7 @@ export class WasmDashboardViewProvider implements vscode.WebviewViewProvider {
                 "<body>",
                 `<body data-wasm-uri="${wasmUri.toString()}" data-mode="grid-menu">`,
             );
-            
+
             console.log("✅ Dashboard webview HTML loaded successfully (grid-menu mode)");
 
             webview.onDidReceiveMessage((message) => {

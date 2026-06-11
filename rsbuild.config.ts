@@ -14,8 +14,8 @@ export default defineConfig({
             css: "./",
         },
         filename: {
-            js: "bundle.js",
-            css: "index.css",
+            js: "bundle.[contenthash].js",
+            css: "index.[contenthash].css",
         },
         assetPrefix: "./",
     },

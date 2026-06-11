@@ -74,16 +74,16 @@ describe("Search Reactivity Test", () => {
         const searchInput = shadow?.querySelector("#grid-search") as HTMLInputElement;
         expect(searchInput).not.toBeNull();
 
-        // Check that initially it displays all features (10 items)
+        // Check that initially it displays 8 component/api items
         const cardsBefore = shadow?.querySelectorAll(".card");
-        expect(cardsBefore?.length).toBe(10);
+        expect(cardsBefore?.length).toBe(8);
 
         // Reset allocOffset for fresh search run
         allocOffset = 100;
 
-        // Simulate typing "wasm"
+        // Simulate typing "tree"
         searchInput.focus();
-        searchInput.value = "wasm";
+        searchInput.value = "tree";
         searchInput.dispatchEvent(new Event("input"));
 
         // Wait for microtask (signals batching)
@@ -91,6 +91,7 @@ describe("Search Reactivity Test", () => {
 
         // Check if cards list updated
         const cardsAfter = shadow?.querySelectorAll(".card");
-        console.log("CARDS AFTER TYPING WASM:", cardsAfter?.length);
+        expect(cardsAfter?.length).toBe(1);
+        expect(cardsAfter[0].textContent).toContain("TreeView Component");
     });
 });

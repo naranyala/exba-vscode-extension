@@ -35,7 +35,7 @@ async function build() {
     // 4. Copy WASM binary to dist/wasm/
     console.log("Step 4: Finalizing assets...");
     fs.mkdirSync("dist/wasm", { recursive: true });
-    
+
     // Copy media folder for icons and assets
     console.log("Copying media assets...");
     fs.mkdirSync("dist/media", { recursive: true });
@@ -43,7 +43,7 @@ async function build() {
     for (const file of mediaFiles) {
         fs.copyFileSync(path.join("media", file), path.join("dist/media", file));
     }
-    
+
     const debugWasm = "rust/target/wasm32-unknown-unknown/debug/dashboard_engine.wasm";
     const releaseWasm = "rust/target/wasm32-unknown-unknown/release/dashboard_engine.wasm";
 

@@ -150,7 +150,9 @@
         "@vscode/webview-ui-toolkit": "^1.4.0",
         "goober": "^2.1.19",
         "iconoir": "^7.11.0",
+        "leaflet": "^1.9.4",
         "lucide-static": "^1.17.0",
+        "vis-network": "^10.1.0",
         "vscode-languageclient": "^9.0.1",
         "vscode-languageserver": "^9.0.1"
     },
@@ -180,6 +182,7 @@
         "lint": "biome lint .",
         "format": "biome format --write .",
         "check": "biome check --write .",
+        "scan-lines": "bun run ./bin/scan-lines.js",
         "link:local": "node ./bin/link-extension.js",
         "launch": "node ./bin/launch.js"
     }

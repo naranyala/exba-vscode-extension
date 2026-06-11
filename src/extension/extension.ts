@@ -9,10 +9,7 @@ function createStatusBarItems(context: vscode.ExtensionContext) {
     console.log("📊 Creating status bar items...");
 
     // Status bar item for toggling sidebar
-    const sidebarToggle = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        100,
-    );
+    const sidebarToggle = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
     sidebarToggle.name = "EXBA Sidebar Toggle";
     sidebarToggle.command = "exba.toggleSidebarView";
     sidebarToggle.text = "$(sidebar-toggle)";
@@ -22,10 +19,7 @@ function createStatusBarItems(context: vscode.ExtensionContext) {
     console.log("✅ Sidebar toggle created");
 
     // Status bar item for dashboard panel
-    const dashboardToggle = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        99,
-    );
+    const dashboardToggle = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 99);
     dashboardToggle.name = "EXBA Dashboard Toggle";
     dashboardToggle.command = "exba.focusDashboardView";
     dashboardToggle.text = "$(dashboard) EXBA Dashboard";
@@ -37,10 +31,7 @@ function createStatusBarItems(context: vscode.ExtensionContext) {
     // Tiny toggle for the right-side panel
     let rightPanelVisible = false;
 
-    const rightPanelToggle = vscode.window.createStatusBarItem(
-        vscode.StatusBarAlignment.Right,
-        98,
-    );
+    const rightPanelToggle = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 98);
     rightPanelToggle.name = "Right Panel";
     rightPanelToggle.command = "exba.toggleRightPanel";
     rightPanelToggle.text = "$(layout-sidebar-right)";
@@ -51,12 +42,8 @@ function createStatusBarItems(context: vscode.ExtensionContext) {
     context.subscriptions.push(
         vscode.commands.registerCommand("exba.toggleRightPanel", () => {
             rightPanelVisible = !rightPanelVisible;
-            rightPanelToggle.tooltip = rightPanelVisible
-                ? "Hide Right Panel"
-                : "Show Right Panel";
-            vscode.commands.executeCommand(
-                "workbench.action.toggleRightSideBarVisibility",
-            );
+            rightPanelToggle.tooltip = rightPanelVisible ? "Hide Right Panel" : "Show Right Panel";
+            vscode.commands.executeCommand("workbench.action.toggleRightSideBarVisibility");
         }),
     );
     console.log("✅ Right sidebar toggle created");
@@ -78,16 +65,16 @@ export function activate(context: vscode.ExtensionContext) {
         // Activate individual showcases/features
         console.log("📝 Registering Hello World command...");
         registerHelloWorld(context);
-        
+
         console.log("🌳 Registering Tree View...");
         registerTreeView(context);
-        
+
         console.log("🐱 Registering Webview Demo...");
         registerWebviewDemo(context);
-        
+
         console.log("📊 Registering WASM Dashboard...");
         registerWasmDashboard(context);
-        
+
         console.log("📂 Registering Workspace Showcase...");
         registerWorkspaceShowcase(context);
 
@@ -100,7 +87,8 @@ export function activate(context: vscode.ExtensionContext) {
         // Use setTimeout to ensure views are fully initialized
         setTimeout(() => {
             console.log("🎯 Attempting to focus EXBA Dashboard view...");
-            vscode.commands.executeCommand("exba.dashboardView.focus")
+            vscode.commands
+                .executeCommand("exba.dashboardView.focus")
                 .then(() => console.log("✅ Dashboard view focused successfully"))
                 .catch((err) => console.error("❌ Failed to focus dashboard view:", err));
         }, 1000);
