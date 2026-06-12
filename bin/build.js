@@ -2,20 +2,37 @@ const { execSync } = require("node:child_process");
 const fs = require("node:fs");
 const path = require("node:path");
 
+function getWasmBinary() {
+    const releaseWasm = "rust/target/wasm32-unknown-unknown/release/dashboard_engine.wasm";
+    const debugWasm = "rust/target/wasm32-unknown-unknown/debug/dashboard_engine.wasm";
+
+    if (fs.existsSync(releaseWasm)) {
+        return { path: releaseWasm, profile: "release" };
+    }
+    if (fs.existsSync(debugWasm)) {
+        return { path: debugWasm, profile: "debug" };
+    }
+    return null;
+}
+
+function tryWasmOpt(inputPath, outputPath) {
+    try {
+        execSync(`wasm-opt -Oz -o "${outputPath}" "${inputPath}"`, {
+            stdio: "pipe",
+        });
+        console.log("  wasm-opt: optimized");
+        return true;
+    } catch {
+        console.log("  wasm-opt: not available, skipping");
+        return false;
+    }
+}
+
 async function build() {
     console.log("Starting build process with Rspack and Rsbuild...");
 
-    // 1. Build Rust WASM
-    console.log("Step 1: Building Rust WASM...");
-    try {
-        execSync("bun run build:rust", { stdio: "inherit" });
-    } catch (e) {
-        console.error("Rust build failed.");
-        process.exit(1);
-    }
-
-    // 2. Build Extension with Rspack
-    console.log("Step 2: Building Extension with Rspack...");
+    // 1. Build Extension with Rspack
+    console.log("Step 1: Building Extension with Rspack...");
     try {
         execSync("npx rspack", { stdio: "inherit" });
     } catch (e) {
@@ -23,8 +40,8 @@ async function build() {
         process.exit(1);
     }
 
-    // 3. Build Webview with Rsbuild
-    console.log("Step 3: Building Webview with Rsbuild...");
+    // 2. Build Webview with Rsbuild
+    console.log("Step 2: Building Webview with Rsbuild...");
     try {
         execSync("bunx rsbuild build", { stdio: "inherit" });
     } catch (e) {
@@ -32,9 +49,28 @@ async function build() {
         process.exit(1);
     }
 
-    // 4. Copy WASM binary to dist/wasm/
-    console.log("Step 4: Finalizing assets...");
+    // 3. Copy WASM binary to dist/wasm/ (Rust must be pre-built by package.json script)
+    console.log("Step 3: Finalizing assets...");
     fs.mkdirSync("dist/wasm", { recursive: true });
+
+    const wasmSource = getWasmBinary();
+    const destPath = "dist/wasm/dashboard_engine.wasm";
+
+    if (wasmSource) {
+        console.log(`Copying WASM binary from ${wasmSource.path} (${wasmSource.profile})`);
+        fs.copyFileSync(wasmSource.path, destPath);
+
+        const size = fs.statSync(destPath).size;
+        console.log(`  size: ${(size / 1024).toFixed(1)} KB`);
+
+        if (wasmSource.profile === "release") {
+            tryWasmOpt(destPath, destPath);
+            const optSize = fs.statSync(destPath).size;
+            console.log(`  after opt: ${(optSize / 1024).toFixed(1)} KB`);
+        }
+    } else {
+        console.warn("WASM binary not found. Run 'bun run build:rust' first.");
+    }
 
     // Copy media folder for icons and assets
     console.log("Copying media assets...");
@@ -42,23 +78,6 @@ async function build() {
     const mediaFiles = fs.readdirSync("media");
     for (const file of mediaFiles) {
         fs.copyFileSync(path.join("media", file), path.join("dist/media", file));
-    }
-
-    const debugWasm = "rust/target/wasm32-unknown-unknown/debug/dashboard_engine.wasm";
-    const releaseWasm = "rust/target/wasm32-unknown-unknown/release/dashboard_engine.wasm";
-
-    let wasmSource = null;
-    if (fs.existsSync(releaseWasm)) {
-        wasmSource = releaseWasm;
-    } else if (fs.existsSync(debugWasm)) {
-        wasmSource = debugWasm;
-    }
-
-    if (wasmSource) {
-        console.log(`Copying WASM binary from ${wasmSource} to dist/wasm/dashboard_engine.wasm`);
-        fs.copyFileSync(wasmSource, "dist/wasm/dashboard_engine.wasm");
-    } else {
-        console.warn("WASM binary not found. Please make sure to run cargo build first.");
     }
 
     console.log("Build completed successfully!");

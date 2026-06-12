@@ -1,5 +1,5 @@
-import { ExbaComponent, defineComponent, html } from "../core/exba";
 import { css as gooberCss } from "goober";
+import { ExbaComponent, defineComponent, html } from "../core/exba";
 import { getGrowth, setGrowth } from "./state";
 
 const styles = {

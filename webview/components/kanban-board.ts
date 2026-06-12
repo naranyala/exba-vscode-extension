@@ -1,4 +1,13 @@
-import { ExbaComponent, css, defineComponent, html, signal } from "../core/exba";
+import {
+    ExbaComponent,
+    createList,
+    css,
+    defineComponent,
+    html,
+    onAfterRender,
+    onCleanup,
+    signal,
+} from "../core/exba";
 
 interface KanbanCard {
     id: string;
@@ -130,6 +139,104 @@ export class KanbanBoard extends ExbaComponent {
         `;
     }
 
+    private _listCleanups: (() => void)[] = [];
+
+    connectedCallback() {
+        super.connectedCallback();
+        onAfterRender(() => {
+            for (const c of this._listCleanups) c();
+            this._listCleanups = [
+                createList(
+                    () => this._cards[0]().filter((c) => c.column === "todo"),
+                    (c) => c.id,
+                    (card) => this._renderCard(card, ["delete-btn", "move-right-btn"]),
+                    () => this.shadow.querySelector(".todo-cards"),
+                ),
+                createList(
+                    () => this._cards[0]().filter((c) => c.column === "progress"),
+                    (c) => c.id,
+                    (card) =>
+                        this._renderCard(card, ["move-left-btn", "delete-btn", "move-right-btn"]),
+                    () => this.shadow.querySelector(".progress-cards"),
+                ),
+                createList(
+                    () => this._cards[0]().filter((c) => c.column === "done"),
+                    (c) => c.id,
+                    (card) => this._renderCard(card, ["move-left-btn", "delete-btn"]),
+                    () => this.shadow.querySelector(".done-cards"),
+                ),
+            ];
+        });
+        onCleanup(() => {
+            for (const c of this._listCleanups) c();
+            this._listCleanups = [];
+        });
+    }
+
+    private _renderCard(card: KanbanCard, buttons: string[]): HTMLElement {
+        const div = document.createElement("div");
+        div.className = "card";
+        div.setAttribute("data-key", card.id);
+
+        const title = document.createElement("span");
+        title.className = "card-title";
+        title.textContent = card.title;
+        div.appendChild(title);
+
+        const actions = document.createElement("div");
+        actions.className = "card-actions";
+
+        if (buttons.includes("move-left-btn")) {
+            const btn = document.createElement("button");
+            btn.className = "action-btn";
+            btn.textContent = "←";
+            btn.addEventListener("click", () => this._moveCard(card.id, "left"));
+            actions.appendChild(btn);
+        }
+
+        if (buttons.includes("delete-btn")) {
+            const btn = document.createElement("button");
+            btn.className = "action-btn delete-btn";
+            btn.textContent = "✕";
+            btn.addEventListener("click", () => this._deleteCard(card.id));
+            actions.appendChild(btn);
+        }
+
+        if (buttons.includes("move-right-btn")) {
+            const btn = document.createElement("button");
+            btn.className = "action-btn";
+            btn.textContent = "→";
+            btn.addEventListener("click", () => this._moveCard(card.id, "right"));
+            actions.appendChild(btn);
+        }
+
+        div.appendChild(actions);
+        return div;
+    }
+
+    private _moveCard(id: string, dir: "left" | "right") {
+        const [get, set] = this._cards;
+        set(
+            get().map((card) => {
+                if (card.id !== id) return card;
+                const nextCol =
+                    dir === "left"
+                        ? card.column === "done"
+                            ? "progress"
+                            : "todo"
+                        : card.column === "todo"
+                          ? "progress"
+                          : "done";
+                return { ...card, column: nextCol };
+            }),
+        );
+    }
+
+    private _deleteCard(id: string) {
+        const [get, set] = this._cards;
+        set(get().filter((card) => card.id !== id));
+    }
+
     handleInput(e: Event) {
         this._newCardTitle[1]((e.target as HTMLInputElement).value);
     }
@@ -147,46 +254,6 @@ export class KanbanBoard extends ExbaComponent {
 
         set([...get(), newCard]);
         this._newCardTitle[1]("");
-    }
-
-    handleMoveLeft(e: Event) {
-        const btn = e.currentTarget as HTMLElement;
-        const id = btn.getAttribute("data-id");
-        const [get, set] = this._cards;
-
-        set(
-            get().map((card) => {
-                if (card.id === id) {
-                    const nextCol = card.column === "done" ? "progress" : "todo";
-                    return { ...card, column: nextCol };
-                }
-                return card;
-            }),
-        );
-    }
-
-    handleMoveRight(e: Event) {
-        const btn = e.currentTarget as HTMLElement;
-        const id = btn.getAttribute("data-id");
-        const [get, set] = this._cards;
-
-        set(
-            get().map((card) => {
-                if (card.id === id) {
-                    const nextCol = card.column === "todo" ? "progress" : "done";
-                    return { ...card, column: nextCol };
-                }
-                return card;
-            }),
-        );
-    }
-
-    handleDelete(e: Event) {
-        const btn = e.currentTarget as HTMLElement;
-        const id = btn.getAttribute("data-id");
-        const [get, set] = this._cards;
-
-        set(get().filter((card) => card.id !== id));
     }
 
     template() {
@@ -219,19 +286,7 @@ export class KanbanBoard extends ExbaComponent {
                             <span>To Do</span>
                             <span class="card-count">${todoCards.length}</span>
                         </div>
-                        ${todoCards
-                            .map(
-                                (card) => html`
-                            <div class="card">
-                                <span class="card-title">${card.title}</span>
-                                <div class="card-actions">
-                                    <button class="action-btn delete-btn" on-click="handleDelete" data-id="${card.id}">✕</button>
-                                    <button class="action-btn" on-click="handleMoveRight" data-id="${card.id}">→</button>
-                                </div>
-                            </div>
-                        `,
-                            )
-                            .join("")}
+                        <div class="todo-cards"></div>
                     </div>
 
                     <div class="column">
@@ -239,20 +294,7 @@ export class KanbanBoard extends ExbaComponent {
                             <span>In Progress</span>
                             <span class="card-count">${progressCards.length}</span>
                         </div>
-                        ${progressCards
-                            .map(
-                                (card) => html`
-                            <div class="card">
-                                <span class="card-title">${card.title}</span>
-                                <div class="card-actions">
-                                    <button class="action-btn" on-click="handleMoveLeft" data-id="${card.id}">←</button>
-                                    <button class="action-btn delete-btn" on-click="handleDelete" data-id="${card.id}">✕</button>
-                                    <button class="action-btn" on-click="handleMoveRight" data-id="${card.id}">→</button>
-                                </div>
-                            </div>
-                        `,
-                            )
-                            .join("")}
+                        <div class="progress-cards"></div>
                     </div>
 
                     <div class="column">
@@ -260,19 +302,7 @@ export class KanbanBoard extends ExbaComponent {
                             <span>Done</span>
                             <span class="card-count">${doneCards.length}</span>
                         </div>
-                        ${doneCards
-                            .map(
-                                (card) => html`
-                            <div class="card">
-                                <span class="card-title">${card.title}</span>
-                                <div class="card-actions">
-                                    <button class="action-btn" on-click="handleMoveLeft" data-id="${card.id}">←</button>
-                                    <button class="action-btn delete-btn" on-click="handleDelete" data-id="${card.id}">✕</button>
-                                </div>
-                            </div>
-                        `,
-                            )
-                            .join("")}
+                        <div class="done-cards"></div>
                     </div>
                 </div>
             </div>

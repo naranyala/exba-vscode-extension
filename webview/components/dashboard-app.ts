@@ -1,7 +1,7 @@
-import { ExbaComponent, defineComponent, html } from "../core/exba";
+import { css as gooberCss } from "goober";
+import { ExbaComponent, defineComponent, html, onAfterRender } from "../core/exba";
 import { debounce, formatCurrency, formatNumber } from "../core/utils";
 import { vscode } from "../core/vscode-service";
-import { css as gooberCss } from "goober";
 import "./vega-chart";
 import "./audio-player";
 import {
@@ -361,9 +361,36 @@ export class DashboardApp extends ExbaComponent {
         this.gCss = gooberCss.bind({ target: this.shadow });
     }
 
+    private demoVegaSpec = {
+        $schema: "https://vega.github.io/schema/vega-lite/v5.json",
+        description: "A simple bar chart with embedded data.",
+        data: {
+            values: [
+                { a: "A", b: 28 },
+                { a: "B", b: 55 },
+                { a: "C", b: 43 },
+                { a: "D", b: 91 },
+                { a: "E", b: 81 },
+                { a: "F", b: 53 },
+                { a: "G", b: 19 },
+                { a: "H", b: 87 },
+                { a: "I", b: 52 },
+            ],
+        },
+        mark: "bar",
+        encoding: {
+            x: { field: "a", type: "nominal", axis: { labelAngle: 0 } },
+            y: { field: "b", type: "quantitative" },
+        },
+    };
+
     connectedCallback() {
         this.initStyles();
         super.connectedCallback();
+        onAfterRender(() => {
+            const chart = this.shadow.querySelector("#demo-vega-chart") as any;
+            if (chart) chart.spec = this.demoVegaSpec;
+        });
     }
 
     styles() {
@@ -448,50 +475,27 @@ export class DashboardApp extends ExbaComponent {
             vscode.postMessage("extensionAction", { name });
         }
     }
-template() {
-    const metrics = getMetrics();
-    if (!metrics) {
-        return html`
+    template() {
+        const metrics = getMetrics();
+        if (!metrics) {
+            return html`
             <div class="${this.classes.loading}">
                 <div class="${this.classes.spinner}"></div>
                 <p>Initializing WASM calculation engine...</p>
             </div>
         `;
-    }
-
-    const users = getUsers();
-    const conversion = getConversion();
-    const spend = getSpend();
-    const growth = getGrowth();
-    const tab = getTab();
-    const search = getSearch();
-    const filteredExtensions = getFilteredExtensions();
-    const query = search.toLowerCase().trim();
-
-    // Demo Vega spec - Render after template returns
-    const demoSpec = {
-        "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-        "description": "A simple bar chart with embedded data.",
-        "data": {
-            "values": [
-                {"a": "A", "b": 28}, {"a": "B", "b": 55}, {"a": "C", "b": 43},
-                {"a": "D", "b": 91}, {"a": "E", "b": 81}, {"a": "F", "b": 53},
-                {"a": "G", "b": 19}, {"a": "H", "b": 87}, {"a": "I", "b": 52}
-            ]
-        },
-        "mark": "bar",
-        "encoding": {
-            "x": {"field": "a", "type": "nominal", "axis": {"labelAngle": 0}},
-            "y": {"field": "b", "type": "quantitative"}
         }
-    };
 
-    setTimeout(() => {
-        const chart = this.shadow.querySelector("#demo-vega-chart") as any;
-        if (chart) chart.spec = demoSpec;
-    }, 0);
+        const users = getUsers();
+        const conversion = getConversion();
+        const spend = getSpend();
+        const growth = getGrowth();
+        const tab = getTab();
+        const search = getSearch();
+        const filteredExtensions = getFilteredExtensions();
+        const query = search.toLowerCase().trim();
 
-    return html`
+        return html`
         <div class="${this.classes.container}">
                 <header class="${this.classes.header}">
                     <h1>WASM Dashboard Engine</h1>
@@ -598,13 +602,13 @@ template() {
                     </div>
                 `
                         : tab === "explorer"
-                            ? html`
+                          ? html`
                                 <div class="${this.classes.container}">
                                     <h2>Explorer Mockup</h2>
                                     <p>This is a placeholder for the Explorer UI.</p>
                                 </div>
                             `
-                            : html`
+                          : html`
                     <div class="${this.classes.searchContainer}">
                         <input 
                             type="text" 

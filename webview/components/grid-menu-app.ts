@@ -1,15 +1,24 @@
-import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
-import { vscode } from "../core/vscode-service";
 import { css as gooberCss } from "goober";
 import {
-    getGridSearch,
-    setGridSearch,
-    getFilteredGridItems,
-    getOpenTabs,
-    setOpenTabs,
-    getActiveTabName,
-    setActiveTabName,
+    ExbaComponent,
+    createList,
+    createSwitch,
+    defineComponent,
+    html,
+    onAfterRender,
+    signal,
+} from "../core/exba";
+import { vscode } from "../core/vscode-service";
+import {
     GRID_ITEMS,
+    getActiveTabName,
+    getFilteredGridItems,
+    getGridSearch,
+    getOpenTabs,
+    getWasmReady,
+    setActiveTabName,
+    setGridSearch,
+    setOpenTabs,
 } from "./state";
 import "./geolocation-demo";
 import "./notification-demo";
@@ -395,6 +404,44 @@ export class GridMenuApp extends ExbaComponent {
 
     connectedCallback() {
         super.connectedCallback();
+
+        onAfterRender(() => {
+            const area = this.shadow.querySelector("[data-demo-area]");
+            if (!area) return;
+
+            const demoComponents: Record<string, () => HTMLElement> = {
+                "Accordion Component": () => {
+                    const el = document.createElement("exba-accordion");
+                    return el;
+                },
+                "TreeView Component": () => {
+                    const el = document.createElement("exba-tree-view");
+                    return el;
+                },
+                "Kanban Board": () => {
+                    const el = document.createElement("exba-kanban");
+                    return el;
+                },
+                "Calendar Date Picker": () => {
+                    const el = document.createElement("exba-calendar");
+                    return el;
+                },
+                "Geolocation API": () => document.createElement("exba-geolocation-demo"),
+                "Notification API": () => document.createElement("exba-notification-demo"),
+                "Local Storage API": () => document.createElement("exba-storage-demo"),
+                "Web Share API": () => document.createElement("exba-share-demo"),
+                "Leaflet Demo": () => document.createElement("exba-leaflet-demo"),
+                "Vis Network Demo": () => document.createElement("exba-vis-network-demo"),
+                "Audio Player": () => document.createElement("audio-player"),
+                "WASM Text Format": () => document.createElement("exba-format-demo"),
+            };
+
+            createSwitch(
+                () => getActiveTabName(),
+                demoComponents,
+                () => area as HTMLElement,
+            );
+        });
     }
 
     styles() {
@@ -535,8 +582,7 @@ export class GridMenuApp extends ExbaComponent {
 
     template() {
         if (!this.classes) return html`<div>Loading...</div>`;
-        const wasm = (ExbaComponent as any).wasm;
-        if (!wasm) {
+        if (!getWasmReady()) {
             return html`
                 <div class="${this.classes.loading}">
                     <div class="${this.classes.spinner}"></div>
@@ -686,32 +732,7 @@ export class GridMenuApp extends ExbaComponent {
                     <div class="${this.classes.interactivePanel}">
                         <h4>Live Demo</h4>
                         <p>Interact with the API or component below:</p>
-                        
-                        ${
-                            activeItem.name === "Accordion Component"
-                                ? html`<exba-accordion></exba-accordion>`
-                                : activeItem.name === "TreeView Component"
-                                  ? html`<exba-tree-view></exba-tree-view>`
-                                  : activeItem.name === "Kanban Board"
-                                    ? html`<exba-kanban></exba-kanban>`
-                                    : activeItem.name === "Calendar Date Picker"
-                                      ? html`<exba-calendar></exba-calendar>`
-                                      : activeItem.name === "Geolocation API"
-                                        ? html`<exba-geolocation-demo></exba-geolocation-demo>`
-                                        : activeItem.name === "Notification API"
-                                          ? html`<exba-notification-demo></exba-notification-demo>`
-                                          : activeItem.name === "Local Storage API"
-                                            ? html`<exba-storage-demo></exba-storage-demo>`
-                                            : activeItem.name === "Web Share API"
-                                              ? html`<exba-share-demo></exba-share-demo>`
-                                              : activeItem.name === "Leaflet Demo"
-                                              ? html`<exba-leaflet-demo></exba-leaflet-demo>`
-                                              : activeItem.name === "Vis Network Demo"
-                                                ? html`<exba-vis-network-demo></exba-vis-network-demo>`
-                                                : activeItem.name === "Audio Player"
-                                                  ? html`<audio-player></audio-player>`
-                                                  : ""
-                                              }
+                        <div data-demo-area></div>
                     </div>
                 </div>
               `

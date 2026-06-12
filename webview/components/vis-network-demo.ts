@@ -1,6 +1,6 @@
-import { ExbaComponent, defineComponent, html } from "../core/exba";
 import { css as gooberCss } from "goober";
-import { DataSet, Network } from 'vis-network/standalone';
+import { DataSet, Network } from "vis-network/standalone";
+import { ExbaComponent, defineComponent, html, onAfterRender } from "../core/exba";
 
 const styles = {
     container: (css: any) => css`
@@ -27,8 +27,7 @@ export class VisNetworkDemo extends ExbaComponent {
             container: styles.container(this.gCss),
         };
         super.connectedCallback();
-        // Initialize vis-network after container is ready
-        setTimeout(() => this.initNetwork(), 0);
+        onAfterRender(() => this.initNetwork());
     }
 
     private initNetwork() {
@@ -62,8 +61,8 @@ export class VisNetworkDemo extends ExbaComponent {
     }
 
     styles() {
-        return `:host { display: block; width: 100%; }`;
+        return ":host { display: block; width: 100%; }";
     }
 }
 
-defineComponent('exba-vis-network-demo', VisNetworkDemo);
+defineComponent("exba-vis-network-demo", VisNetworkDemo);

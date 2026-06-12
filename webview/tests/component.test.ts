@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { ExbaComponent, css, defineComponent, html, signal } from "../core/exba";
 import { CalendarPicker } from "../components/calendar-picker";
+import { ExbaComponent, css, defineComponent, html, signal } from "../core/exba";
 
 const [getName, setName] = signal("World");
 
@@ -65,10 +65,10 @@ describe("CalendarPicker Component", () => {
         expect(shadow).not.toBeNull();
 
         const prevBtn = Array.from(shadow?.querySelectorAll("button") || []).find(
-            (b) => b.textContent?.trim() === "◀"
+            (b) => b.textContent?.trim() === "◀",
         );
         const nextBtn = Array.from(shadow?.querySelectorAll("button") || []).find(
-            (b) => b.textContent?.trim() === "▶"
+            (b) => b.textContent?.trim() === "▶",
         );
 
         expect(prevBtn).toBeDefined();
@@ -86,8 +86,8 @@ describe("CalendarPicker Component", () => {
 
 import { GeolocationDemo } from "../components/geolocation-demo";
 import { NotificationDemo } from "../components/notification-demo";
-import { StorageDemo } from "../components/storage-demo";
 import { ShareDemo } from "../components/share-demo";
+import { StorageDemo } from "../components/storage-demo";
 
 describe("GeolocationDemo Component", () => {
     let originalGeolocation: any;
@@ -98,7 +98,7 @@ describe("GeolocationDemo Component", () => {
         originalGeolocation = navigator.geolocation;
 
         const mockGeo = {
-            getCurrentPosition: (success: Function, error: Function) => {
+            getCurrentPosition: (success: (pos: any) => void, error: (err: any) => void) => {
                 if (mockGeoSuccess) {
                     success({
                         coords: {
@@ -156,6 +156,7 @@ describe("GeolocationDemo Component", () => {
 
         const btn = shadow?.querySelector("button");
         btn?.click();
+        await new Promise((resolve) => queueMicrotask(resolve as any));
         await new Promise((resolve) => queueMicrotask(resolve as any));
 
         expect(shadow?.innerHTML).toContain("Error: User denied Geolocation");
@@ -223,7 +224,9 @@ describe("NotificationDemo Component", () => {
 
         expect(permissionRequested).toBe(true);
         expect(notificationCreated).toBe(true);
-        expect(shadow?.innerHTML).toContain("Notification Permission Status: <strong>granted</strong>");
+        expect(shadow?.innerHTML).toContain(
+            "Notification Permission Status: <strong>granted</strong>",
+        );
     });
 });
 
@@ -256,7 +259,9 @@ describe("StorageDemo Component", () => {
         await new Promise((resolve) => queueMicrotask(resolve as any));
 
         expect(localStorage.getItem("exba_storage_showcase")).toBe("Test storage persist");
-        expect(shadow?.innerHTML).toContain("Currently Saved: <strong>Test storage persist</strong>");
+        expect(shadow?.innerHTML).toContain(
+            "Currently Saved: <strong>Test storage persist</strong>",
+        );
 
         // Clear storage
         clearBtn?.click();

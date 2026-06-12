@@ -1,7 +1,32 @@
 import { describe, expect, it, vi } from "vitest";
-import { batch, effect, memo, signal, untrack } from "../core/exba";
+import {
+    ExbaComponent,
+    batch,
+    createContext,
+    createDeferred,
+    createList,
+    createModel,
+    createPortal,
+    createResource,
+    createShow,
+    createSwitch,
+    defineComponent,
+    effect,
+    html,
+    memo,
+    onCleanup,
+    onError,
+    onMount,
+    provideContext,
+    reportError,
+    signal,
+    untrack,
+    useContext,
+    useRef,
+} from "../core/exba";
 
 describe("WasmFramework Signals", () => {
+    // ... (existing tests)
     it("should track and update values", () => {
         const [getCount, setCount] = signal(0);
         expect(getCount()).toBe(0);

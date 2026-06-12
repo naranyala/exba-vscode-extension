@@ -1,6 +1,6 @@
-import { ExbaComponent, defineComponent, html } from "../core/exba";
 import { css as gooberCss } from "goober";
-import L from 'leaflet';
+import L from "leaflet";
+import { ExbaComponent, defineComponent, html, onAfterRender } from "../core/exba";
 
 const styles = {
     container: (css: any) => css`
@@ -27,8 +27,7 @@ export class LeafletDemo extends ExbaComponent {
             container: styles.container(this.gCss),
         };
         super.connectedCallback();
-        // Initialize Leaflet map after container is rendered
-        requestAnimationFrame(() => this.initMap());
+        onAfterRender(() => this.initMap());
     }
 
     private initMap() {
@@ -37,8 +36,8 @@ export class LeafletDemo extends ExbaComponent {
         if (!el) return;
         // Use imported Leaflet instance
         const map = L.map(el).setView([51.505, -0.09], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+            attribution: "&copy; OpenStreetMap contributors",
         }).addTo(map);
         this.mapInitialized = true;
     }
@@ -51,8 +50,8 @@ export class LeafletDemo extends ExbaComponent {
     }
 
     styles() {
-        return `:host { display: block; width: 100%; }`;
+        return ":host { display: block; width: 100%; }";
     }
 }
 
-defineComponent('exba-leaflet-demo', LeafletDemo);
+defineComponent("exba-leaflet-demo", LeafletDemo);

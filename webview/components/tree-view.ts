@@ -1,5 +1,5 @@
-import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 import { css as gooberCss } from "goober";
+import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 import type { TreeNode } from "./state";
 
 const styles = {

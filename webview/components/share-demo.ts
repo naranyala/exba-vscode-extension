@@ -1,5 +1,5 @@
-import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 import { css as gooberCss } from "goober";
+import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 
 const styles = {
     container: (css: any) => css`
@@ -92,11 +92,15 @@ export class ShareDemo extends ExbaComponent {
         return html`
             <div class="${this.classes.container}">
                 <button class="${this.classes.btn}" on-click="handleShare">Share Framework Link</button>
-                ${statusVal ? html`
+                ${
+                    statusVal
+                        ? html`
                     <div class="${this.classes.status}${isSuccessVal ? " success" : ""}">
                         ${statusVal}
                     </div>
-                ` : ""}
+                `
+                        : ""
+                }
             </div>
         `;
     }

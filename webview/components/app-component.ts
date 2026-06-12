@@ -20,8 +20,9 @@ export const WasmComponent = ExbaComponent;
 
     try {
         const wasmUri = document.body.dataset.wasmUri;
+        const debug = document.body.dataset.debug === "true";
         if (wasmUri) {
-            await ExbaComponent.initWasm(wasmUri);
+            await ExbaComponent.initWasm(wasmUri, debug);
             setWasmReady(true);
         }
 

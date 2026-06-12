@@ -1,5 +1,5 @@
-import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 import { css as gooberCss } from "goober";
+import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 
 const styles = {
     container: (css: any) => css`
@@ -30,7 +30,9 @@ const styles = {
 };
 
 export class NotificationDemo extends ExbaComponent {
-    private _permission = signal<string>(typeof Notification !== "undefined" ? Notification.permission : "unsupported");
+    private _permission = signal<string>(
+        typeof Notification !== "undefined" ? Notification.permission : "unsupported",
+    );
     private gCss: any;
     private classes!: any;
 

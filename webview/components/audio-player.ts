@@ -1,56 +1,110 @@
-import WaveSurfer from 'wavesurfer.js';
+import WaveSurfer from "wavesurfer.js";
+import { ExbaComponent, css, defineComponent, onAfterRender, onCleanup } from "../core/exba";
 
-export class AudioPlayerComponent extends HTMLElement {
+export class AudioPlayerComponent extends ExbaComponent {
     private wavesurfer: WaveSurfer | null = null;
-    private container: HTMLDivElement | null = null;
 
-    static get observedAttributes() {
-        return ['src'];
+    styles() {
+        return css`
+            :host {
+                display: block;
+            }
+            .container {
+                display: flex;
+                flex-direction: column;
+                gap: 1rem;
+                padding: 0.5rem;
+            }
+            .file-input {
+                background: rgba(15, 23, 42, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                color: #cbd5e1;
+                font-size: 0.75rem;
+                padding: 0.4rem;
+                cursor: pointer;
+            }
+            .file-input::file-selector-button {
+                background: rgba(167, 139, 250, 0.15);
+                border: 1px solid rgba(167, 139, 250, 0.3);
+                color: #a78bfa;
+                padding: 0.3rem 0.7rem;
+                border-radius: 6px;
+                font-size: 0.7rem;
+                font-weight: 600;
+                cursor: pointer;
+                margin-right: 0.5rem;
+            }
+            .waveform {
+                width: 100%;
+                height: 128px;
+                background: rgba(30, 41, 59, 0.4);
+                border-radius: 12px;
+                overflow: hidden;
+            }
+            .play-btn {
+                background: rgba(167, 139, 250, 0.15);
+                border: 1px solid rgba(167, 139, 250, 0.3);
+                color: #a78bfa;
+                padding: 0.5rem 1.5rem;
+                border-radius: 8px;
+                font-size: 0.75rem;
+                font-weight: 600;
+                cursor: pointer;
+                width: fit-content;
+                outline: none;
+            }
+            .play-btn:hover {
+                background: rgba(167, 139, 250, 0.25);
+            }
+        `;
     }
 
     connectedCallback() {
-        this.innerHTML = `
-            <input type="file" id="fileInput" accept="audio/*" style="margin-bottom: 1rem;" />
-            <div id="waveform" style="width: 100%; height: 128px; background: rgba(30, 41, 59, 0.4); border-radius: 12px; margin-bottom: 1rem;"></div>
-            <button id="playPauseBtn" style="padding: 0.5rem 1rem; cursor: pointer;">Play/Pause</button>
+        super.connectedCallback();
+        onAfterRender(() => {
+            const container = this.shadow.querySelector(".waveform") as HTMLDivElement;
+            if (!container) return;
+
+            this.wavesurfer = WaveSurfer.create({
+                container,
+                waveColor: "#a78bfa",
+                progressColor: "#6366f1",
+                cursorColor: "#ffffff",
+                barWidth: 2,
+                responsive: true,
+            });
+
+            const fileInput = this.shadow.querySelector(".file-input") as HTMLInputElement;
+            fileInput.addEventListener("change", (e) => {
+                const target = e.target as HTMLInputElement;
+                if (target.files && target.files.length > 0) {
+                    const url = URL.createObjectURL(target.files[0]);
+                    this.wavesurfer?.load(url);
+                }
+            });
+
+            const playBtn = this.shadow.querySelector(".play-btn") as HTMLButtonElement;
+            playBtn.addEventListener("click", () => {
+                this.wavesurfer?.playPause();
+            });
+        });
+
+        onCleanup(() => {
+            this.wavesurfer?.destroy();
+            this.wavesurfer = null;
+        });
+    }
+
+    template() {
+        return `
+            <div class="container">
+                <input type="file" class="file-input" accept="audio/*" />
+                <div class="waveform"></div>
+                <button class="play-btn">Play / Pause</button>
+            </div>
         `;
-        
-        this.container = this.querySelector('#waveform');
-        const playPauseBtn = this.querySelector('#playPauseBtn') as HTMLButtonElement;
-        const fileInput = this.querySelector('#fileInput') as HTMLInputElement;
-
-        this.wavesurfer = WaveSurfer.create({
-            container: this.container!,
-            waveColor: '#a78bfa',
-            progressColor: '#6366f1',
-            cursorColor: '#ffffff',
-            barWidth: 2,
-            responsive: true,
-        });
-
-        playPauseBtn.addEventListener('click', () => {
-            this.wavesurfer?.playPause();
-        });
-
-        fileInput.addEventListener('change', (e) => {
-            const target = e.target as HTMLInputElement;
-            if (target.files && target.files.length > 0) {
-                const file = target.files[0];
-                const url = URL.createObjectURL(file);
-                this.wavesurfer?.load(url);
-            }
-        });
-    }
-
-    attributeChangedCallback(name: string, oldValue: string, newValue: string) {
-        if (name === 'src' && oldValue !== newValue && this.wavesurfer) {
-            this.wavesurfer.load(newValue);
-        }
-    }
-
-    disconnectedCallback() {
-        this.wavesurfer?.destroy();
     }
 }
 
-customElements.define("audio-player", AudioPlayerComponent);
+defineComponent("audio-player", AudioPlayerComponent);

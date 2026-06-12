@@ -1,5 +1,5 @@
-import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 import { css as gooberCss } from "goober";
+import { ExbaComponent, createResource, defineComponent, html, onMount } from "../core/exba";
 
 const styles = {
     container: (css: any) => css`
@@ -22,6 +22,10 @@ const styles = {
         &:hover {
             background: rgba(167, 139, 250, 0.25);
         }
+        &:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     `,
     info: (css: any) => css`
         font-size: 0.75rem;
@@ -35,16 +39,49 @@ const styles = {
         color: #f87171;
         font-size: 0.75rem;
     `,
+    loading: (css: any) => css`
+        color: #94a3b8;
+        font-size: 0.75rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    `,
+    spinner: (css: any) => css`
+        width: 12px;
+        height: 12px;
+        border: 2px solid rgba(167, 139, 250, 0.3);
+        border-top-color: #a78bfa;
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    `,
 };
 
-export class GeolocationDemo extends ExbaComponent {
-    private _state = signal<{ lat: number; lng: number; error: string | null }>({
-        lat: 0,
-        lng: 0,
-        error: null,
+interface GeoPosition {
+    lat: number;
+    lng: number;
+}
+
+function getCurrentPosition(): Promise<GeoPosition> {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error("Geolocation is not supported by your browser."));
+            return;
+        }
+        navigator.geolocation.getCurrentPosition(
+            (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+            (err) => reject(new Error(err.message)),
+        );
     });
+}
+
+export class GeolocationDemo extends ExbaComponent {
     private gCss: any;
     private classes!: any;
+    private _getState!: () => import("../core/exba").ResourceState<GeoPosition>;
+    private _load!: () => void;
 
     constructor() {
         super();
@@ -57,46 +94,57 @@ export class GeolocationDemo extends ExbaComponent {
             btn: styles.btn(this.gCss),
             info: styles.info(this.gCss),
             error: styles.error(this.gCss),
+            loading: styles.loading(this.gCss),
+            spinner: styles.spinner(this.gCss),
         };
+
+        const [getState, load] = createResource<GeoPosition>(() => getCurrentPosition());
+        this._getState = getState;
+        this._load = load;
+
         super.connectedCallback();
+    }
+
+    handleGetLocation() {
+        this._load();
     }
 
     styles() {
         return ":host { display: block; }";
     }
 
-    handleGetLocation() {
-        if (!navigator.geolocation) {
-            this._state[1]({ lat: 0, lng: 0, error: "Geolocation is not supported by your browser." });
-            return;
-        }
-
-        navigator.geolocation.getCurrentPosition(
-            (pos) => {
-                this._state[1]({
-                    lat: pos.coords.latitude,
-                    lng: pos.coords.longitude,
-                    error: null,
-                });
-            },
-            (err) => {
-                this._state[1]({ lat: 0, lng: 0, error: err.message });
-            }
-        );
-    }
-
     template() {
-        const state = this._state[0]();
+        const state = this._getState();
         return html`
             <div class="${this.classes.container}">
-                <button class="${this.classes.btn}" on-click="handleGetLocation">Get GPS Coordinates</button>
-                ${state.error ? html`<div class="${this.classes.error}">Error: ${state.error}</div>` : ""}
-                ${state.lat && state.lng ? html`
-                    <div class="${this.classes.info}">
-                        Latitude:  ${state.lat.toFixed(6)}<br>
-                        Longitude: ${state.lng.toFixed(6)}
+                <button class="${this.classes.btn}" on-click="handleGetLocation" ?disabled="${state.status === "loading"}">${state.status === "loading" ? "Locating..." : "Get GPS Coordinates"}</button>
+                ${
+                    state.status === "loading"
+                        ? html`
+                    <div class="${this.classes.loading}">
+                        <div class="${this.classes.spinner}"></div>
+                        <span>Requesting GPS position...</span>
                     </div>
-                ` : ""}
+                `
+                        : ""
+                }
+                ${
+                    state.status === "error"
+                        ? html`
+                    <div class="${this.classes.error}">Error: ${state.error}</div>
+                `
+                        : ""
+                }
+                ${
+                    state.status === "ready"
+                        ? html`
+                    <div class="${this.classes.info}">
+                        Latitude:  ${state.data.lat.toFixed(6)}<br>
+                        Longitude: ${state.data.lng.toFixed(6)}
+                    </div>
+                `
+                        : ""
+                }
             </div>
         `;
     }

@@ -1,5 +1,5 @@
-import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 import { css as gooberCss } from "goober";
+import { ExbaComponent, defineComponent, html, signal } from "../core/exba";
 
 const styles = {
     container: (css: any) => css`
@@ -221,8 +221,18 @@ export class CalendarPicker extends ExbaComponent {
         const selected = this._selectedDate[0]();
 
         const monthNames = [
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
+            "January",
+            "February",
+            "March",
+            "April",
+            "May",
+            "June",
+            "July",
+            "August",
+            "September",
+            "October",
+            "November",
+            "December",
         ];
         const weekdays = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
@@ -240,20 +250,24 @@ export class CalendarPicker extends ExbaComponent {
 
         // Fill month days
         for (let d = 1; d <= daysInMonth; d++) {
-            const isToday = this.today.getDate() === d &&
-                            this.today.getMonth() === month &&
-                            this.today.getFullYear() === year;
+            const isToday =
+                this.today.getDate() === d &&
+                this.today.getMonth() === month &&
+                this.today.getFullYear() === year;
 
-            const isSelected = selected !== null &&
-                               selected.getDate() === d &&
-                               selected.getMonth() === month &&
-                               selected.getFullYear() === year;
+            const isSelected =
+                selected !== null &&
+                selected.getDate() === d &&
+                selected.getMonth() === month &&
+                selected.getFullYear() === year;
 
             const dayClass = [
                 this.classes.day,
                 isToday ? "today" : "",
-                isSelected ? "selected" : ""
-            ].filter(Boolean).join(" ");
+                isSelected ? "selected" : "",
+            ]
+                .filter(Boolean)
+                .join(" ");
 
             days.push(html`
                 <button class="${dayClass}" data-day="${d}" on-click="handleSelectDay">

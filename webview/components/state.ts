@@ -1,7 +1,6 @@
-import { ExbaComponent, memo, signal } from "../core/exba";
-import { callWasm, passStringToWasm } from "../core/utils";
+import { type ResourceState, createResource, memo, signal } from "../core/exba";
+import { WasmBridge } from "../core/wasm-bridge";
 
-// 1. Create reactive signals shared by all components
 export const [getUsers, setUsers] = signal(25000);
 export const [getConversion, setConversion] = signal(3.5);
 export const [getSpend, setSpend] = signal(55);
@@ -9,10 +8,8 @@ export const [getGrowth, setGrowth] = signal(18);
 export const [getTab, setTab] = signal<"dashboard" | "explorer">("explorer");
 export const [getSearch, setSearch] = signal("");
 
-// WASM readiness signal
 export const [getWasmReady, setWasmReady] = signal(false);
 
-// Grid menu signals (isolated for sidepanel)
 export const [getGridSearch, setGridSearch] = signal("");
 
 export interface TabItem {
@@ -78,7 +75,6 @@ export const EXTENSIONS: ExtensionItem[] = [
     },
 ];
 
-// Grid Menu items for EXBA sidepanel
 export interface GridItem {
     name: string;
     description: string;
@@ -153,7 +149,6 @@ export const GRID_ITEMS: GridItem[] = [
         tags: ["share", "webshare", "native", "browser"],
         action: "extensionAction",
     },
-    // VS Code API Exploration demos
     {
         name: "VS Code API Exploration",
         description: "Exploring VS Code Extension API capabilities.",
@@ -172,7 +167,7 @@ export const GRID_ITEMS: GridItem[] = [
     },
     {
         name: "Vis Network Demo",
-        description: "Mind‑map style network visualization with vis‑network.",
+        description: "Mind-map style network visualization with vis-network.",
         category: "vscode api exploration",
         icon: "🧠",
         tags: ["vis", "network", "mindmap"],
@@ -186,81 +181,81 @@ export const GRID_ITEMS: GridItem[] = [
         tags: ["audio", "waveform", "player"],
         action: "extensionAction",
     },
+    {
+        name: "WASM Text Format",
+        description:
+            "Format text via WASM string-return export (uppercase, lowercase, word count).",
+        category: "WASM Examples",
+        icon: "📝",
+        tags: ["wasm", "format", "string", "rust"],
+        action: "extensionAction",
+    },
 ];
-
-// Define Memos (Derived State)
-export const getMetrics = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    if (!wasm) return null;
-    return callWasm(
-        wasm,
-        "calculate_metrics",
-        getUsers(),
-        getConversion(),
-        getSpend(),
-        getGrowth(),
-    );
-});
-
-export const getChartData = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    const metrics = getMetrics();
-    if (!wasm || !metrics) return [];
-    return callWasm(wasm, "generate_chart_data", metrics.monthlyRevenue, getGrowth()) as {
-        x: number;
-        y: number;
-    }[];
-});
-
-export const getFilteredExtensions = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    const search = getSearch().toLowerCase().trim();
-    if (!wasm) return [];
-
-    return EXTENSIONS.map((ext) => {
-        if (!search) return { ...ext, score: 100 };
-
-        const [qPtr, qLen] = passStringToWasm(wasm, search);
-        const targetText = `${ext.name} ${ext.description} ${ext.category} ${ext.tags.join(" ")}`;
-        const [tPtr, tLen] = passStringToWasm(wasm, targetText);
-
-        const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
-        wasm.dealloc(qPtr, qLen);
-        wasm.dealloc(tPtr, tLen);
-
-        return { ...ext, score };
-    })
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score);
-});
-
-export const getFilteredGridItems = memo(() => {
-    getWasmReady();
-    const wasm = (ExbaComponent as any).wasm;
-    const search = getGridSearch().toLowerCase().trim();
-    if (!wasm) return [];
-
-    return GRID_ITEMS.map((item) => {
-        if (!search) return { ...item, score: 100 };
-
-        const [qPtr, qLen] = passStringToWasm(wasm, search);
-        const targetText = `${item.name} ${item.description} ${item.category} ${item.tags.join(" ")}`;
-        const [tPtr, tLen] = passStringToWasm(wasm, targetText);
-
-        const score = wasm.score_search(qPtr, qLen, tPtr, tLen);
-        wasm.dealloc(qPtr, qLen);
-        wasm.dealloc(tPtr, tLen);
-
-        return { ...item, score };
-    })
-        .filter((item) => item.score > 0)
-        .sort((a, b) => b.score - a.score);
-});
 
 export interface TreeNode {
     name: string;
     children?: TreeNode[];
+}
+
+function getWasm() {
+    getWasmReady();
+    return WasmBridge.instance.isReady ? WasmBridge.instance : null;
+}
+
+function wasmMemo<T, F>(fn: (wasm: WasmBridge) => T, fallback: F): () => T | F {
+    return memo(() => {
+        const wasm = getWasm();
+        if (!wasm) return fallback;
+        try {
+            return fn(wasm);
+        } catch (e) {
+            console.error("[WASM] memo failed:", e);
+            return fallback;
+        }
+    });
+}
+
+export const getMetrics = wasmMemo(
+    (wasm) => wasm.calculateMetrics(getUsers(), getConversion(), getSpend(), getGrowth()),
+    null,
+);
+
+export const getChartData = wasmMemo((wasm) => {
+    const metrics = getMetrics();
+    if (!metrics) return [];
+    return wasm.generateChartData(metrics.monthlyRevenue, getGrowth());
+}, []);
+
+function scoreItems<
+    T extends { name: string; description: string; category: string; tags: string[] },
+>(items: T[], search: string, wasm: WasmBridge): (T & { score: number })[] {
+    if (!search) return items.map((item) => ({ ...item, score: 100 }));
+    return items
+        .map((item) => {
+            const targetText = `${item.name} ${item.description} ${item.category} ${item.tags.join(" ")}`;
+            return { ...item, score: wasm.scoreSearch(search, targetText) };
+        })
+        .filter((item) => item.score > 0)
+        .sort((a, b) => b.score - a.score);
+}
+
+export const getFilteredExtensions = wasmMemo(
+    (wasm) => scoreItems(EXTENSIONS, getSearch().toLowerCase().trim(), wasm),
+    [],
+);
+
+export const getFilteredGridItems = wasmMemo(
+    (wasm) => scoreItems(GRID_ITEMS, getGridSearch().toLowerCase().trim(), wasm),
+    [],
+);
+
+export function createWasmResource<T>(
+    fn: (wasm: WasmBridge) => Promise<T>,
+): [() => ResourceState<T>, () => void] {
+    const [getState, load] = createResource<T>(() => {
+        const wasm = getWasm();
+        if (!wasm) return Promise.reject(new Error("WASM not ready"));
+        return fn(wasm);
+    });
+    return [getState, load];
 }

@@ -139,6 +139,17 @@ export function onCleanup(fn: Cleanup) {
 }
 
 /**
+ * Lifecycle hook: runs after each render (DOM patch) completes.
+ * Use this instead of setTimeout(fn, 0) / requestAnimationFrame
+ * when you need the DOM to exist (third-party libs, refs, etc).
+ */
+export function onAfterRender(fn: () => void) {
+    if (currentComponent) {
+        currentComponent._addAfterRenderHook(fn);
+    }
+}
+
+/**
  * Tagged template helpers for syntax highlighting and string interpolation.
  */
 export const html = (strings: TemplateStringsArray, ...values: any[]) =>
@@ -276,7 +287,7 @@ const DOMRenderer = {
             }
         }
 
-        // 2. Discover and bind declarative event handlers
+        // 2. Discover and bind declarative event handlers and boolean attributes
         const allElements = shadow.querySelectorAll("*");
         for (const el of Array.from(allElements)) {
             for (const attr of Array.from(el.attributes)) {
@@ -293,6 +304,14 @@ const DOMRenderer = {
                         }
                     }
                     el.removeAttribute(attr.name);
+                } else if (attr.name.startsWith("?")) {
+                    const realAttr = attr.name.slice(1);
+                    if (attr.value === "true" || attr.value === "") {
+                        el.setAttribute(realAttr, "");
+                    } else {
+                        el.removeAttribute(realAttr);
+                    }
+                    el.removeAttribute(attr.name);
                 }
             }
         }
@@ -304,10 +323,15 @@ const DOMRenderer = {
  */
 export abstract class ExbaComponent extends HTMLElement {
     protected shadow: ShadowRoot;
-    protected static wasm: any;
     private _mountHooks: (() => undefined | Cleanup)[] = [];
     private _cleanupHooks: Cleanup[] = [];
     private _stopEffect: Cleanup | null = null;
+    private _afterRenderHooks: (() => void)[] = [];
+    _errorHandler: ((err: unknown) => void) | null = null;
+
+    _addAfterRenderHook(fn: () => void) {
+        this._afterRenderHooks.push(fn);
+    }
 
     constructor() {
         super();
@@ -357,34 +381,9 @@ export abstract class ExbaComponent extends HTMLElement {
         this._cleanupHooks.push(fn);
     }
 
-    static async initWasm(wasmUri: string): Promise<void> {
-        if (!ExbaComponent.wasm) {
-            const response = await fetch(wasmUri);
-            const buffer = await response.arrayBuffer();
-
-            const importObject = {
-                env: {
-                    js_log: (ptr: number, len: number) => {
-                        const wasm = ExbaComponent.wasm;
-                        const memory = new Uint8Array(wasm.memory.buffer, ptr, len);
-                        const message = new TextDecoder("utf-8").decode(memory);
-                        console.log(`[RUST] ${message}`);
-                    },
-                },
-            };
-
-            const { instance } = await WebAssembly.instantiate(buffer, importObject);
-            ExbaComponent.wasm = instance.exports;
-        }
-    }
-
-    protected getWasmString(): string {
-        const wasm = ExbaComponent.wasm;
-        if (!wasm) throw new Error("WASM engine is not initialized");
-        const ptr = wasm.get_result_ptr();
-        const len = wasm.get_result_len();
-        const memory = new Uint8Array(wasm.memory.buffer, ptr, len);
-        return new TextDecoder("utf-8").decode(memory);
+    static async initWasm(wasmUri: string, debug = false): Promise<void> {
+        const { WasmBridge } = await import("./wasm-bridge");
+        await WasmBridge.instance.init({ wasmUri, debug });
     }
 
     connectedCallback() {
@@ -416,18 +415,315 @@ export abstract class ExbaComponent extends HTMLElement {
     }
 
     private render() {
-        let styleEl = this.shadow.querySelector("style:not(#_goober)");
-        if (!styleEl) {
-            styleEl = document.createElement("style");
-            styleEl.textContent = this.styles();
-            this.shadow.prepend(styleEl);
-        } else {
-            const newStyles = this.styles();
-            if (styleEl.textContent !== newStyles) {
-                styleEl.textContent = newStyles;
+        try {
+            let styleEl = this.shadow.querySelector("style:not(#_goober)");
+            if (!styleEl) {
+                styleEl = document.createElement("style");
+                styleEl.textContent = this.styles();
+                this.shadow.prepend(styleEl);
+            } else {
+                const newStyles = this.styles();
+                if (styleEl.textContent !== newStyles) {
+                    styleEl.textContent = newStyles;
+                }
+            }
+
+            DOMRenderer.render(this.shadow, this.template(), this);
+
+            const hooks = this._afterRenderHooks;
+            this._afterRenderHooks = [];
+            for (const hook of hooks) {
+                currentComponent = this;
+                try {
+                    hook();
+                } finally {
+                    currentComponent = null;
+                }
+            }
+        } catch (err) {
+            const handler = this._errorHandler ?? errorHandler;
+            if (handler) {
+                handler(err);
+            } else {
+                console.error("[ExbaComponent] Render error:", err);
             }
         }
-
-        DOMRenderer.render(this.shadow, this.template(), this);
     }
+}
+
+// ── Keyed list reconciliation ─────────────────────────────────────
+
+export interface ListTransitionHooks<T> {
+    onEnter?: (el: HTMLElement, item: T, index: number) => void;
+    onLeave?: (el: HTMLElement, item: T) => void;
+}
+
+function reconcileList<T>(
+    container: HTMLElement,
+    items: T[],
+    keyFn: (item: T) => string,
+    renderItem: (item: T, index: number) => HTMLElement,
+    transition?: ListTransitionHooks<T>,
+) {
+    const oldKeys = new Map<string, { el: HTMLElement; item: T }>();
+    for (let i = 0; i < container.children.length; i++) {
+        const child = container.children[i] as HTMLElement;
+        const key = child.dataset.key;
+        if (key) oldKeys.set(key, { el: child, item: (child as any).__listItem });
+    }
+
+    const newKeySet = new Set<string>();
+
+    for (let i = 0; i < items.length; i++) {
+        const key = keyFn(items[i]);
+        newKeySet.add(key);
+
+        const entry = oldKeys.get(key);
+        let el: HTMLElement;
+
+        if (entry) {
+            oldKeys.delete(key);
+            el = entry.el;
+            const newEl = renderItem(items[i], i);
+            el.replaceChildren(...newEl.childNodes);
+            for (const attr of Array.from(newEl.attributes)) {
+                el.setAttribute(attr.name, attr.value);
+            }
+            el.dataset.key = key;
+        } else {
+            el = renderItem(items[i], i);
+            el.dataset.key = key;
+            if (transition?.onEnter) {
+                transition.onEnter(el, items[i], i);
+            }
+        }
+        (el as any).__listItem = items[i];
+
+        const targetIndex = i;
+        const currentIndex = Array.from(container.children).indexOf(el);
+        if (currentIndex !== targetIndex) {
+            const ref = container.children[targetIndex + 1] || null;
+            container.insertBefore(el, ref);
+        } else if (!el.parentNode) {
+            container.appendChild(el);
+        }
+    }
+
+    for (const [, entry] of oldKeys) {
+        if (transition?.onLeave) {
+            transition.onLeave(entry.el, entry.item);
+        }
+        entry.el.remove();
+    }
+}
+
+export function createList<T>(
+    getItems: () => T[],
+    keyFn: (item: T) => string,
+    renderItem: (item: T, index: number) => HTMLElement,
+    getContainer: () => HTMLElement | null,
+    transition?: ListTransitionHooks<T>,
+): Cleanup {
+    return effect(() => {
+        const container = getContainer();
+        if (!container) return;
+        const items = getItems();
+        reconcileList(container, items, keyFn, renderItem, transition);
+    });
+}
+
+// ── Conditional rendering ─────────────────────────────────────────
+
+export interface ShowTransitionHooks {
+    onEnter?: (el: HTMLElement) => void;
+    onLeave?: (el: HTMLElement) => void;
+}
+
+export function createShow(
+    getWhen: () => boolean,
+    renderContent: () => HTMLElement,
+    getContainer: () => HTMLElement | null,
+    renderFallback?: () => HTMLElement,
+    transition?: ShowTransitionHooks,
+): Cleanup {
+    let currentEl: HTMLElement | null = null;
+    let currentState: boolean | null = null;
+    return effect(() => {
+        const container = getContainer();
+        if (!container) return;
+        const show = getWhen();
+        if (show === currentState && currentEl?.parentNode === container) return;
+        currentState = show;
+        if (currentEl) {
+            if (transition?.onLeave) transition.onLeave(currentEl);
+            currentEl.remove();
+        }
+        currentEl = show ? renderContent() : (renderFallback?.() ?? document.createElement("div"));
+        container.appendChild(currentEl);
+        if (transition?.onEnter) transition.onEnter(currentEl);
+    });
+}
+
+export function createSwitch(
+    getKey: () => string,
+    cases: Record<string, () => HTMLElement>,
+    getContainer: () => HTMLElement | null,
+    renderFallback?: () => HTMLElement,
+    transition?: ShowTransitionHooks,
+): Cleanup {
+    let currentEl: HTMLElement | null = null;
+    let currentKey: string | null = null;
+    return effect(() => {
+        const container = getContainer();
+        if (!container) return;
+        const key = getKey();
+        if (key === currentKey && currentEl?.parentNode === container) return;
+        currentKey = key;
+        if (currentEl) {
+            if (transition?.onLeave) transition.onLeave(currentEl);
+            currentEl.remove();
+        }
+        const renderFn = cases[key] ?? renderFallback;
+        currentEl = renderFn ? renderFn() : document.createElement("div");
+        container.appendChild(currentEl);
+        if (transition?.onEnter) transition.onEnter(currentEl);
+    });
+}
+
+// ── Two-way binding ───────────────────────────────────────────────
+
+export function createModel(
+    getValue: () => string,
+    setValue: (v: string) => void,
+    getInput: () => HTMLInputElement | HTMLTextAreaElement | null,
+): Cleanup {
+    return effect(() => {
+        const input = getInput();
+        if (!input) return;
+        const val = getValue();
+        if (input !== document.activeElement && input.value !== val) {
+            input.value = val;
+        }
+        const handler = (e: Event) => {
+            setValue((e.target as HTMLInputElement).value);
+        };
+        input.addEventListener("input", handler);
+        return () => input.removeEventListener("input", handler);
+    });
+}
+
+// ── Context / Dependency Injection ─────────────────────────────────
+
+export interface Context<T> {
+    id: symbol;
+    defaultValue: T;
+}
+
+const contextValues = new Map<symbol, any>();
+
+export function createContext<T>(defaultValue: T): Context<T> {
+    return { id: Symbol("context"), defaultValue };
+}
+
+export function provideContext<T>(context: Context<T>, value: T): void {
+    contextValues.set(context.id, value);
+}
+
+export function useContext<T>(context: Context<T>): T {
+    return contextValues.get(context.id) ?? context.defaultValue;
+}
+
+let errorHandler: ((err: unknown) => void) | null = null;
+
+export function onError(handler: (err: unknown) => void): void {
+    if (currentComponent) {
+        currentComponent._errorHandler = handler;
+    } else {
+        errorHandler = handler;
+    }
+}
+
+export function reportError(err: unknown): void {
+    const handler = currentComponent?._errorHandler ?? errorHandler;
+    if (handler) {
+        handler(err);
+    } else {
+        console.error(err);
+    }
+}
+
+// ── DOM Ref ───────────────────────────────────────────────────────
+
+export function useRef<T extends HTMLElement = HTMLElement>(
+    getContainer: () => HTMLElement | null,
+    selector: string,
+): () => T | null {
+    return () => getContainer()?.querySelector<T>(selector) ?? null;
+}
+
+// ── Deferred value (debounce updates) ──────────────────────────────
+
+export function createDeferred<T>(getValue: () => T, delayMs = 150): () => T {
+    const [getDeferred, setDeferred] = signal<T>(getValue());
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    effect(() => {
+        const val = getValue();
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            setDeferred(val);
+            timeout = null;
+        }, delayMs);
+        return () => {
+            if (timeout) clearTimeout(timeout);
+        };
+    });
+    return getDeferred;
+}
+
+// ── Portal (teleport content to a different DOM location) ──────────
+
+const portalRoots = new Map<string, HTMLElement>();
+
+export function registerPortal(name: string, el: HTMLElement): void {
+    portalRoots.set(name, el);
+}
+
+export function unregisterPortal(name: string): void {
+    portalRoots.delete(name);
+}
+
+export function createPortal(getContent: () => HTMLElement, portalName: () => string): Cleanup {
+    return effect(() => {
+        const root = portalRoots.get(portalName());
+        if (!root) return;
+        const el = getContent();
+        root.appendChild(el);
+        return () => el.remove();
+    });
+}
+
+// ── Async resource (loading / error / success states) ─────────────
+
+export type ResourceState<T> =
+    | { status: "idle" }
+    | { status: "loading" }
+    | { status: "error"; error: string }
+    | { status: "ready"; data: T };
+
+export function createResource<T>(fetcher: () => Promise<T>): [() => ResourceState<T>, () => void] {
+    const [getState, setState] = signal<ResourceState<T>>({ status: "idle" });
+
+    const load = () => {
+        setState({ status: "loading" });
+        fetcher()
+            .then((data) => setState({ status: "ready", data }))
+            .catch((err) =>
+                setState({
+                    status: "error",
+                    error: err instanceof Error ? err.message : String(err),
+                }),
+            );
+    };
+
+    return [getState, load];
 }
