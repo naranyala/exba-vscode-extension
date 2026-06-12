@@ -103,10 +103,18 @@ export const GRID_ITEMS: GridItem[] = [
     },
     {
         name: "Kanban Board",
-        description: "Stateful Kanban board with columns, card movement, and task creation.",
+        description: "Drag-and-drop Kanban board layout using CSS grid.",
         category: "Component Examples",
         icon: "📋",
-        tags: ["kanban", "board", "cards", "stateful"],
+        tags: ["kanban", "drag", "drop", "layout"],
+        action: "extensionAction",
+    },
+    {
+        name: "Tabs Component",
+        description: "Generic layout component to segment content into swappable panes.",
+        category: "Component Examples",
+        icon: "🗂️",
+        tags: ["tabs", "layout", "navigation", "panes"],
         action: "extensionAction",
     },
     {
@@ -142,6 +150,14 @@ export const GRID_ITEMS: GridItem[] = [
         action: "extensionAction",
     },
     {
+        name: "SQLite Explorer",
+        description: "Import, view, and edit SQLite databases entirely in the browser.",
+        category: "component exploration",
+        icon: "🗄️",
+        tags: ["sqlite", "database", "sql"],
+        action: "extensionAction",
+    },
+    {
         name: "Web Share API",
         description: "Invoke the native OS sharing dialog for links/text.",
         category: "Browser API",
@@ -150,9 +166,9 @@ export const GRID_ITEMS: GridItem[] = [
         action: "extensionAction",
     },
     {
-        name: "VS Code API Exploration",
+        name: "Component Exploration",
         description: "Exploring VS Code Extension API capabilities.",
-        category: "vscode api exploration",
+        category: "component exploration",
         icon: "🔌",
         tags: ["vscode", "api", "extension"],
         action: "extensionAction",
@@ -160,7 +176,7 @@ export const GRID_ITEMS: GridItem[] = [
     {
         name: "Leaflet Demo",
         description: "Interactive map using Leaflet.js library.",
-        category: "vscode api exploration",
+        category: "component exploration",
         icon: "🗺️",
         tags: ["leaflet", "map", "interactive"],
         action: "extensionAction",
@@ -168,7 +184,7 @@ export const GRID_ITEMS: GridItem[] = [
     {
         name: "Vis Network Demo",
         description: "Mind-map style network visualization with vis-network.",
-        category: "vscode api exploration",
+        category: "component exploration",
         icon: "🧠",
         tags: ["vis", "network", "mindmap"],
         action: "extensionAction",
@@ -176,7 +192,7 @@ export const GRID_ITEMS: GridItem[] = [
     {
         name: "Audio Player",
         description: "Audio player with waveform visualization.",
-        category: "vscode api exploration",
+        category: "component exploration",
         icon: "🎵",
         tags: ["audio", "waveform", "player"],
         action: "extensionAction",
@@ -189,6 +205,13 @@ export const GRID_ITEMS: GridItem[] = [
         icon: "📝",
         tags: ["wasm", "format", "string", "rust"],
         action: "extensionAction",
+    },
+    {
+        name: "Browser Tabs Manager",
+        description: "Visual and JSON manager for browser tabs. Real-time reactivity.",
+        category: "Mini Apps Lab",
+        icon: "📑",
+        tags: ["json", "manager", "tabs", "reactivity"],
     },
 ];
 

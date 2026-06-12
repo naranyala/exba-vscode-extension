@@ -80,6 +80,12 @@ async function build() {
         fs.copyFileSync(path.join("media", file), path.join("dist/media", file));
     }
 
+    console.log("Copying sql.js WASM binary...");
+    const sqlWasmPath = "node_modules/sql.js/dist/sql-wasm.wasm";
+    if (fs.existsSync(sqlWasmPath)) {
+        fs.copyFileSync(sqlWasmPath, "dist/media/sql-wasm.wasm");
+    }
+
     console.log("Build completed successfully!");
 }
 

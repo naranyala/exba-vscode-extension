@@ -26,6 +26,9 @@ import "./storage-demo";
 import "./share-demo";
 import "./leaflet-demo";
 import "./vis-network-demo";
+import "./tabs";
+import "./sqlite-demo";
+import "./browser-tabs-demo";
 
 const styles = {
     header: (css: any) => css`
@@ -357,6 +360,7 @@ const styles = {
 
 export class GridMenuApp extends ExbaComponent {
     private _sectionsExpanded = signal<Record<string, boolean>>({
+        miniAppsLab: true,
         components: false,
         apis: false,
         vscodeApi: true,
@@ -432,6 +436,9 @@ export class GridMenuApp extends ExbaComponent {
                 "Web Share API": () => document.createElement("exba-share-demo"),
                 "Leaflet Demo": () => document.createElement("exba-leaflet-demo"),
                 "Vis Network Demo": () => document.createElement("exba-vis-network-demo"),
+                "SQLite Explorer": () => document.createElement("exba-sqlite-demo"),
+                "Browser Tabs Manager": () => document.createElement("exba-browser-tabs"),
+                "Tabs Component": () => document.createElement("exba-tabs"),
                 "Audio Player": () => document.createElement("audio-player"),
                 "WASM Text Format": () => document.createElement("exba-format-demo"),
             };
@@ -556,6 +563,11 @@ export class GridMenuApp extends ExbaComponent {
         set({ ...get(), vscodeApi: !get().vscodeApi });
     }
 
+    handleToggleMiniAppsLab() {
+        const [get, set] = this._sectionsExpanded;
+        set({ ...get(), miniAppsLab: !get().miniAppsLab });
+    }
+
     handleToggleApis() {
         const [get, set] = this._sectionsExpanded;
         set({ ...get(), apis: !get().apis });
@@ -602,8 +614,9 @@ export class GridMenuApp extends ExbaComponent {
         const activeItem = openTabs.find((x) => x.name === activeTab);
 
         const componentItems = items.filter((x) => x.category === "Component Examples");
+        const miniAppsItems = items.filter((x) => x.category === "Mini Apps Lab");
         const apiItems = items.filter((x) => x.category === "Browser API");
-        const vscodeApiItems = items.filter((x) => x.category === "vscode api exploration");
+        const vscodeApiItems = items.filter((x) => x.category === "component exploration");
 
         return html`
             <div class="${this.classes.navbar}">
@@ -650,9 +663,30 @@ export class GridMenuApp extends ExbaComponent {
                     ${query ? `${items.length} result${items.length !== 1 ? "s" : ""} for "${search}"` : `${items.length} components`}
                 </div>
 
-                <!-- VS Code API Exploration Collapsible Lane -->
+                <!-- Mini Apps Lab Collapsible Lane -->
+                <button class="${this.classes.sectionHeader}" on-click="handleToggleMiniAppsLab">
+                    <h3>Mini Apps Lab</h3>
+                    <span class="chevron${!sectionsExpanded.miniAppsLab ? " collapsed" : ""}">▼</span>
+                </button>
+                ${
+                    sectionsExpanded.miniAppsLab
+                        ? miniAppsItems.length > 0
+                            ? html`
+                        <div class="${this.classes.grid}">
+                            ${miniAppsItems.map((item) => this.renderCard(item, query)).join("")}
+                        </div>
+                    `
+                            : html`
+                        <div class="${this.classes.noResults}">
+                            <p>No mini apps match "${search}"</p>
+                        </div>
+                    `
+                        : ""
+                }
+
+                <!-- Component Exploration Collapsible Lane -->
                 <button class="${this.classes.sectionHeader}" on-click="handleToggleVscodeApi">
-                    <h3>VS Code API Exploration</h3>
+                    <h3>Component Exploration</h3>
                     <span class="chevron${!sectionsExpanded.vscodeApi ? " collapsed" : ""}">▼</span>
                 </button>
                 ${

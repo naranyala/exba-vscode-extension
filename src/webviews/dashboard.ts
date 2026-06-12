@@ -88,10 +88,14 @@ export class WasmDashboardViewProvider implements vscode.WebviewViewProvider {
             const wasmUri = webview.asWebviewUri(
                 vscode.Uri.joinPath(this._extensionUri, "dist", "wasm", "dashboard_engine.wasm"),
             );
+            
+            const sqlWasmUri = webview.asWebviewUri(
+                vscode.Uri.joinPath(this._extensionUri, "dist", "media", "sql-wasm.wasm"),
+            );
 
             webview.html = htmlContent.replace(
                 "<body>",
-                `<body data-wasm-uri="${wasmUri.toString()}" data-mode="grid-menu">`,
+                `<body data-wasm-uri="${wasmUri.toString()}" data-sql-wasm-uri="${sqlWasmUri.toString()}" data-mode="grid-menu">`,
             );
 
             console.log("✅ Dashboard webview HTML loaded successfully (grid-menu mode)");
@@ -222,10 +226,13 @@ class WasmDashboardPanel {
         const wasmUri = webview.asWebviewUri(
             vscode.Uri.joinPath(this._extensionUri, "dist", "wasm", "dashboard_engine.wasm"),
         );
+        const sqlWasmUri = webview.asWebviewUri(
+            vscode.Uri.joinPath(this._extensionUri, "dist", "media", "sql-wasm.wasm"),
+        );
 
         this._panel.webview.html = htmlContent.replace(
             "<body>",
-            `<body data-wasm-uri="${wasmUri.toString()}">`,
+            `<body data-wasm-uri="${wasmUri.toString()}" data-sql-wasm-uri="${sqlWasmUri.toString()}">`,
         );
     }
 }

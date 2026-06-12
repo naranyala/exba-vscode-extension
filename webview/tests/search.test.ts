@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { WasmBridge } from "../core/wasm-bridge";
 import { createMockWasmBridge } from "../core/wasm-test-utils";
+import { setWasmReady } from "../components/state";
 
 describe("Search Reactivity Test", () => {
     beforeEach(() => {
@@ -12,14 +13,17 @@ describe("Search Reactivity Test", () => {
     });
 
     it("should mount grid-menu-app and filter on typing", async () => {
-        // Import app-component to trigger auto-init
-        await import("../components/app-component");
+        await import("../components/grid-menu-app");
+        const appRoot = document.getElementById("app-root");
+        
+        const gridMenu = document.createElement("grid-menu-app");
+        appRoot?.appendChild(gridMenu);
+
+        setWasmReady(true);
 
         // Give auto-init time to run
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        const appRoot = document.getElementById("app-root");
-        const gridMenu = appRoot?.querySelector("grid-menu-app");
         expect(gridMenu).not.toBeNull();
 
         const shadow = gridMenu?.shadowRoot;
@@ -30,7 +34,7 @@ describe("Search Reactivity Test", () => {
 
         // Initially only the vscode api section is expanded
         const cardsBefore = shadow?.querySelectorAll(".card");
-        expect(cardsBefore?.length).toBe(4);
+        expect(cardsBefore?.length).toBe(6);
 
         // Search for "leaflet" — exists in the expanded vscode api section
         searchInput.focus();
